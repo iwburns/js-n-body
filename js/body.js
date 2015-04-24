@@ -46,7 +46,6 @@ APP.body = (function body(THREE) {
 			trail: {},
 			thisFrameAcceleration: new THREE.Vector3(),
 			radiusChanged: false
-
 		};
 
 		//need special checks for booleans
@@ -92,11 +91,6 @@ APP.body = (function body(THREE) {
 		var getState = function getState() {
 			return state;
 		};
-
-		var setState = function setState(args) {
-			state = args;
-		};
-
 	};
 
 	return {
