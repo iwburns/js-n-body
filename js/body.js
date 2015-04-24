@@ -13,8 +13,6 @@ APP.body = (function body(THREE) {
 			widthSegements: 15,
 			heightSegments: 15,
 
-			minRadius: 0.01,
-
 			isLocked: false,
 			drawTrail: true,
 			trailLength: 100,
