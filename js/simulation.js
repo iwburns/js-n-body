@@ -5,7 +5,7 @@ var APP  = APP || {};
 APP.simulation = (function simulation(THREE) {
 	'use strict';
 
-	var make = function make(args) {
+	var make = function make(args, afterValidation) {
 
 		args = args || {};
 
@@ -133,11 +133,144 @@ APP.simulation = (function simulation(THREE) {
 			state.maxParticleMass = state.minParticleMass;
 		}
 
-		//set the inputs to the calculated values
+		// ideally this will be used to set input values to their validated values
+		afterValidation();
 
-		//initialize the simulation
+		var init = function init() {
+			var i;
+			var maxAbsRange = state.gridSize;
+			
+			var getRandom = new Math.seedrandom(state.seed);
+			
+			var randX;
+			var randY;
+			var randZ;
 
-		// start the simulation
+			var randVX;
+			var randVY;
+			var randVZ;
+
+			var randomSizeMassColor;
+
+			var radiusRange = state.maxParticleSize - state.minParticleSize;
+			var massRange = state.maxParticleMass - state.minParticleMass;
+
+			var radius;
+			var mass;
+			var color;
+			var velocity;
+
+			state.bodyArray = [];
+
+			for (i = 0; i < state.particleCount; ++i) {
+
+				randX = (getRandom() * maxAbsRange * 2) - maxAbsRange;
+				randY = (getRandom() * maxAbsRange * 2) - maxAbsRange;
+				randZ = (getRandom() * maxAbsRange * 2) - maxAbsRange;
+
+				randomSizeMassColor = getRandom();
+
+				radius = (randomSizeMassColor * radiusRange) + state.minParticleSize;
+				mass   = (randomSizeMassColor * massRange) + state.minParticleMass;
+				color = randomSizeMassColor * 0.5; // todo: this will need to be changed
+
+				randVX = (getRandom() * 2) - 1;
+				randVY = (getRandom() * 2) - 1;
+				randVZ = (getRandom() * 2) - 1;
+
+				velocity = new THREE.Vector3(randVX, randVY, randVZ);
+				velocity.normalize();
+				velocity.multiplyScalar(sim.startingVelocity / timeMultiplier);
+
+				state.bodyArray[i] = APP.body.make({
+					// position is in meters
+					position: new THREE.Vector3(randX,randY,randZ),
+					// radius is in meters
+					radius: radius,
+					// mass is in kg
+					mass: mass,
+					// color: (new THREE.Color()).setHSL(color, 1, 0.5),
+					color: (new THREE.Color()).setRGB(color, color, color),
+					// velocity is in meters / second
+					velocity: velocity,
+					isLocked: false,
+					drawLines: state.drawLines,
+					totalMass: roughTotalMass,
+					trailLength: state.trailLength
+				});
+
+			}
+
+		};
+
+		var pause = function pause() {
+			state.paused = true;
+		};
+
+		var play = function play() {
+			state.paused = false;
+		};
+
+		var getState = function getState() {
+			return state;
+		};
+
+		var update = function update() {
+
+			updateSingleThreaded();
+
+			updatePositions();
+
+		};
+		
+		var updateSingleThreaded = function updateSingleThreaded() {
+			var i;
+			var j;
+			var bodyArray = state.bodyArray;
+			var arrayLen = bodyArray.length;
+
+			var thisState;
+			var otherState;
+
+			for (i = 0; i < arrayLen; ++i) {
+
+				thisState = bodyArray[i].getState();
+
+				if (thisState.mass === 0) {
+					continue;
+				}
+
+				for (j = i + 1; j < arrayLen; ++j) {
+
+					otherState = bodyArray[j].getState();
+
+					if (otherState.mass === 0) {
+						continue;
+					}
+
+					//update accelerations and detect collisions
+
+				}
+			}
+		};
+
+		var updatePositions = function updatePositions() {
+			var i;
+			var bodyArray = state.bodyArray;
+			var arrayLen = bodyArray.length;
+
+			for (i = 0; i < arrayLen; ++i) {
+				//update positions
+			}
+		};
+
+		return {
+			init: init,
+			start: start,
+			pause: pause,
+			getState: getState,
+			update: update
+		};
 
 	};
 
