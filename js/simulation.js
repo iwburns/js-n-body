@@ -28,6 +28,8 @@ APP.simulation = (function simulation(THREE) {
 
 			startingVelocity: 1,
 
+			detectCollisions: true,
+
 			seed: Date.now()
 		};
 
@@ -69,6 +71,11 @@ APP.simulation = (function simulation(THREE) {
 			state.drawTrails = defaults.drawTrails;
 		} else {
 			state.drawTrails = args.drawTrails;
+		}
+		if (args.detectCollisions === undefined) {
+			state.detectCollisions = defaults.detectCollisions;
+		} else {
+			state.detectCollisions = args.detectCollisions;
 		}
 
 		//check for NaN values from textfield inputs
@@ -230,8 +237,28 @@ APP.simulation = (function simulation(THREE) {
 			var arrayLen = bodyArray.length;
 
 			var thisState;
-			var otherState;
+			var thisPosition;
+			var thisVelocity;
+			var thisMass;
+			var thisRadius;
+			var thisMomentum;
 
+			var otherState;
+			var otherPosition;
+			var otherVelocity;
+			var otherMass;
+			var otherRadius;
+			var otherMomentum;
+
+			var distanceSq;
+			var collisionDistanceSq;
+			var totalMomentum;
+
+			var finalMass;
+			var finalVelocity;
+			var finalRadius;
+
+			outerLoop:
 			for (i = 0; i < arrayLen; ++i) {
 
 				thisState = bodyArray[i].getState();
@@ -240,6 +267,10 @@ APP.simulation = (function simulation(THREE) {
 					continue;
 				}
 
+				thisPosition = thisState.position;
+				thisMass = thisState.mass;
+
+				innerLoop:
 				for (j = i + 1; j < arrayLen; ++j) {
 
 					otherState = bodyArray[j].getState();
@@ -248,7 +279,58 @@ APP.simulation = (function simulation(THREE) {
 						continue;
 					}
 
-					//update accelerations and detect collisions
+					otherPosition = otherState.position;
+					otherMass = otherState.mass;
+
+					distanceSq = thisPosition.distanceToSquared(otherPosition);
+
+					if (state.detectCollisions) {
+
+						thisRadius = thisState.radius;
+						otherRadius = otherState.radius;
+						collisionDistanceSq = (thisRadius + otherRadius) * (thisRadius + otherRadius);
+
+						if (distanceSq <= collisionDistanceSq ) {
+
+							thisVelocity = thisState.velocity;
+							otherVelocity = otherState.velocity;
+
+							//we don't want to modify the velocity vectors here so we must clone
+							thisMomentum = cloneVector(thisVelocity).multiplyScalar(thisMass);
+							otherMomentum = cloneVector(otherVelocity).multiplyScalar(otherMass);
+							totalMomentum = thisMomentum.add(otherMomentum);
+
+							finalMass = thisMass + otherMass;
+							finalVelocity = totalMomentum.divideScalar(finalMass);
+							finalRadius = Math.pow((thisRadius * thisRadius * thisRadius + otherRadius * otherRadius * otherRadius), 1/3);
+
+							if (thisRadius >= otherRadius) {
+								thisState.velocity = cloneVector(finalVelocity); // this may not be necessary
+								thisState.mass = finalMass;
+								thisState.radius = finalRadius;
+								otherState.mass = 0;
+							} else {
+								otherState.velocity = cloneVector(finalVelocity); // this may not be necessary
+								otherState.mass = finalMass;
+								otherState.radius = finalRadius;
+								thisState.mass = 0;
+							}
+
+							if (thisState.mass === 0) {
+								// we should stop calculating for "this" object (bodyArray[i])
+								// because this object will soon be removed
+								// and all subsequent calculations on it will result in a 0 add to accel.
+								continue outerLoop;
+							} else {
+								// we should keep calculating for "this" object (bodyArray[i])
+								// but we need to skip accel. calculations
+								// between the current "this" object and the current "other" object (bodyArray[j])
+								continue innerLoop;
+							}
+						}
+					}
+
+					//update accelerations
 
 				}
 			}
@@ -262,6 +344,10 @@ APP.simulation = (function simulation(THREE) {
 			for (i = 0; i < arrayLen; ++i) {
 				//update positions
 			}
+		};
+
+		var cloneVector = function cloneVector(v) {
+			return new THREE.Vector3(v.x, v.y, v.z);
 		};
 
 		return {
