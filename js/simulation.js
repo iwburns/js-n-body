@@ -11,6 +11,7 @@ APP.simulation = (function simulation(THREE) {
 
 		var defaults = {
 			timeMultiplier: 1000000,
+			gravityMultiplier: 1,
 
 			gridSize: 150,
 			gridSpacing: 5,	//5 grid lines per grid
@@ -45,7 +46,10 @@ APP.simulation = (function simulation(THREE) {
 		};
 		
 		var state = {
+			gravity: 6.673e-11,
+
 			timeMultiplier: args.timeMultiplier || defaults.timeMultiplier,
+			gravityMultiplier: args.gravityMultiplier || defaults.gravityMultiplier,
 
 			gridSize: args.gridSize || defaults.gridSize,
 			gridSpacing: args.gridSpacing || defaults.gridSpacing,
@@ -250,6 +254,11 @@ APP.simulation = (function simulation(THREE) {
 			var otherRadius;
 			var otherMomentum;
 
+			var positionDiff;
+			var accelerationDirection;
+			var adjustedGravity = state.gravity * state.gravityMultiplier;
+			var adjustedGravityPerDistanceSquared;
+
 			var distanceSq;
 			var collisionDistanceSq;
 			var totalMomentum;
@@ -282,7 +291,8 @@ APP.simulation = (function simulation(THREE) {
 					otherPosition = otherState.position;
 					otherMass = otherState.mass;
 
-					distanceSq = thisPosition.distanceToSquared(otherPosition);
+					positionDiff = cloneVector(otherPosition).sub(thisPosition);
+					distanceSq = positionDiff.lengthSq();
 
 					if (state.detectCollisions) {
 
@@ -309,28 +319,36 @@ APP.simulation = (function simulation(THREE) {
 								thisState.mass = finalMass;
 								thisState.radius = finalRadius;
 								otherState.mass = 0;
+
+								// we should keep calculating for "this" object (bodyArray[i])
+								// but we need to skip accel. calculations
+								// between the current "this" object and the current "other" object (bodyArray[j])
+								// because they will result in a 0 add to accel for "this" object.
+								continue innerLoop;
 							} else {
 								otherState.velocity = cloneVector(finalVelocity); // this may not be necessary
 								otherState.mass = finalMass;
 								otherState.radius = finalRadius;
 								thisState.mass = 0;
-							}
 
-							if (thisState.mass === 0) {
 								// we should stop calculating for "this" object (bodyArray[i])
 								// because this object will soon be removed
 								// and all subsequent calculations on it will result in a 0 add to accel.
-								continue outerLoop;
-							} else {
-								// we should keep calculating for "this" object (bodyArray[i])
-								// but we need to skip accel. calculations
-								// between the current "this" object and the current "other" object (bodyArray[j])
-								continue innerLoop;
+								continue outerLoop;								
 							}
 						}
 					}
 
-					//update accelerations
+					adjustedGravityPerDistanceSquared = adjustedGravity / distanceSq;
+					accelerationDirection = positionDiff.normalize();
+
+					//calculate accel Vector for 'this' object.
+
+
+					
+
+					accelerationDirection.negate();
+					//calculate accel Vector for 'other' object.
 
 				}
 			}
