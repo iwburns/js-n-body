@@ -14,6 +14,7 @@ APP.body = (function body(THREE) {
 			heightSegments: 15,
 
 			isLocked: false,
+			respectOnlyLocked: false,
 			drawTrail: true,
 			trailLength: 100,
 
@@ -30,6 +31,7 @@ APP.body = (function body(THREE) {
 		var state = {
 
 			//isLocked is checked below
+			//respectOnlyLocked is checked below
 			//drawTrail is checked below
 			trailLength: args.trailLength || defaults.trailLength,
 
@@ -48,12 +50,17 @@ APP.body = (function body(THREE) {
 
 		//need special checks for booleans
 		if (args.isLocked === undefined) {
-			state.isLocked = DEFAULT_IS_LOCKED;
+			state.isLocked = defaults.isLocked;
 		} else {
 			state.isLocked = args.isLocked;
 		}
+		if (args.respectOnlyLocked === undefined) {
+			state.respectOnlyLocked = defaults.respectOnlyLocked;
+		} else {
+			state.respectOnlyLocked = args.respectOnlyLocked;
+		}
 		if (args.drawTrail === undefined) {
-			state.drawTrail = DEFAULT_DRAW_LINES;
+			state.drawTrail = defaults.drawTrail;
 		} else {
 			state.drawTrail = args.drawTrail;
 		}
@@ -88,6 +95,10 @@ APP.body = (function body(THREE) {
 
 		var getState = function getState() {
 			return state;
+		};
+
+		return {
+			getState: getState
 		};
 	};
 

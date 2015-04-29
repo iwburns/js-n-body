@@ -267,13 +267,15 @@ APP.simulation = (function simulation(THREE) {
 			var finalVelocity;
 			var finalRadius;
 
+			var calculate;
+
 			outerLoop:
 			for (i = 0; i < arrayLen; ++i) {
 
 				thisState = bodyArray[i].getState();
 
 				if (thisState.mass === 0) {
-					continue;
+					continue outerLoop;
 				}
 
 				thisPosition = thisState.position;
@@ -285,7 +287,7 @@ APP.simulation = (function simulation(THREE) {
 					otherState = bodyArray[j].getState();
 
 					if (otherState.mass === 0) {
-						continue;
+						continue innerLoop;
 					}
 
 					otherPosition = otherState.position;
@@ -340,16 +342,27 @@ APP.simulation = (function simulation(THREE) {
 					}
 
 					adjustedGravityPerDistanceSquared = adjustedGravity / distanceSq;
-					accelerationDirection = positionDiff.normalize();
 
-					//calculate accel Vector for 'this' object.
+					accelerationDirection = positionDiff.normalize(); // for "this" object
 
+					calculate = true;
+					if (thisState.isLocked || (thisState.respectOnlyLocked && !otherState.isLocked)) {
+						calculate = false;
+					}
 
-					
+					if (calculate) {
+						//calculate accel Vector for 'this' object.
+					}
 
-					accelerationDirection.negate();
-					//calculate accel Vector for 'other' object.
+					calculate = true;
+					if (otherState.isLocked || (otherState.respectOnlyLocked && !thisState.isLocked)) {
+						calculate = false;
+					}
 
+					if (calculate) {
+						accelerationDirection.negate();	// for "other" object
+						//calculate accel Vector for 'other' object.
+					}
 				}
 			}
 		};
