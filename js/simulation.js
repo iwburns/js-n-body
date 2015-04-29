@@ -61,6 +61,8 @@ APP.simulation = (function simulation(THREE) {
 
 			minParticleMass: args.minParticleMass || defaults.minParticleMass,
 			maxParticlemass: args.maxParticleMass || defaults.maxParticleMass,
+			
+			roughTotalMass: ( state.particleCount * (state.minParticleCount + state.maxParticleCount) / 2),
 
 			//drawTrails is checked below
 			trailLength: args.trailLength || defaults.trailLength,
@@ -191,7 +193,7 @@ APP.simulation = (function simulation(THREE) {
 
 				velocity = new THREE.Vector3(randVX, randVY, randVZ);
 				velocity.normalize();
-				velocity.multiplyScalar(sim.startingVelocity / timeMultiplier);
+				velocity.multiplyScalar(state.startingVelocity / state.timeMultiplier);
 
 				state.bodyArray[i] = APP.body.make({
 					// position is in meters
@@ -206,7 +208,7 @@ APP.simulation = (function simulation(THREE) {
 					velocity: velocity,
 					isLocked: false,
 					drawLines: state.drawLines,
-					totalMass: roughTotalMass,
+					totalMass: state.roughTotalMass,
 					trailLength: state.trailLength
 				});
 
@@ -383,7 +385,7 @@ APP.simulation = (function simulation(THREE) {
 
 		return {
 			init: init,
-			start: start,
+			play: play,
 			pause: pause,
 			getState: getState,
 			update: update
