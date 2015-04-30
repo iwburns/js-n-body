@@ -242,14 +242,14 @@ APP.simulation = (function simulation(THREE) {
 			var bodyArray = state.bodyArray;
 			var arrayLen = bodyArray.length;
 
-			var thisState;
+			var thisBody;
 			var thisPosition;
 			var thisVelocity;
 			var thisMass;
 			var thisRadius;
 			var thisMomentum;
 
-			var otherState;
+			var otherBody;
 			var otherPosition;
 			var otherVelocity;
 			var otherMass;
@@ -274,40 +274,40 @@ APP.simulation = (function simulation(THREE) {
 			outerLoop:
 			for (i = 0; i < arrayLen; ++i) {
 
-				thisState = bodyArray[i].getState();
+				thisBody = bodyArray[i].getState();
 
-				if (thisState.mass === 0) {
+				if (thisBody.mass === 0) {
 					continue outerLoop;
 				}
 
-				thisPosition = thisState.position;
-				thisMass = thisState.mass;
+				thisPosition = thisBody.position;
+				thisMass = thisBody.mass;
 
 				innerLoop:
 				for (j = i + 1; j < arrayLen; ++j) {
 
-					otherState = bodyArray[j].getState();
+					otherBody = bodyArray[j].getState();
 
-					if (otherState.mass === 0) {
+					if (otherBody.mass === 0) {
 						continue innerLoop;
 					}
 
-					otherPosition = otherState.position;
-					otherMass = otherState.mass;
+					otherPosition = otherBody.position;
+					otherMass = otherBody.mass;
 
 					positionDiff = cloneVector(otherPosition).sub(thisPosition);
 					distanceSq = positionDiff.lengthSq();
 
 					if (state.detectCollisions) {
 
-						thisRadius = thisState.radius;
-						otherRadius = otherState.radius;
+						thisRadius = thisBody.radius;
+						otherRadius = otherBody.radius;
 						collisionDistanceSq = (thisRadius + otherRadius) * (thisRadius + otherRadius);
 
-						if (distanceSq <= collisionDistanceSq ) {
+						if (distanceSq <= collisionDistanceSq) {
 
-							thisVelocity = thisState.velocity;
-							otherVelocity = otherState.velocity;
+							thisVelocity = thisBody.velocity;
+							otherVelocity = otherBody.velocity;
 
 							//we don't want to modify the velocity vectors here so we must clone
 							thisMomentum = cloneVector(thisVelocity).multiplyScalar(thisMass);
@@ -319,10 +319,10 @@ APP.simulation = (function simulation(THREE) {
 							finalRadius = Math.pow((thisRadius * thisRadius * thisRadius + otherRadius * otherRadius * otherRadius), 1/3);
 
 							if (thisRadius >= otherRadius) {
-								thisState.velocity = cloneVector(finalVelocity); // this may not be necessary
-								thisState.mass = finalMass;
-								thisState.radius = finalRadius;
-								otherState.mass = 0;
+								thisBody.velocity = cloneVector(finalVelocity); // this may not be necessary
+								thisBody.mass = finalMass;
+								thisBody.radius = finalRadius;
+								otherBody.mass = 0;
 
 								// we should keep calculating for "this" object (bodyArray[i])
 								// but we need to skip accel. calculations
@@ -330,15 +330,15 @@ APP.simulation = (function simulation(THREE) {
 								// because they will result in a 0 add to accel for "this" object.
 								continue innerLoop;
 							} else {
-								otherState.velocity = cloneVector(finalVelocity); // this may not be necessary
-								otherState.mass = finalMass;
-								otherState.radius = finalRadius;
-								thisState.mass = 0;
+								otherBody.velocity = cloneVector(finalVelocity); // this may not be necessary
+								otherBody.mass = finalMass;
+								otherBody.radius = finalRadius;
+								thisBody.mass = 0;
 
 								// we should stop calculating for "this" object (bodyArray[i])
 								// because this object will soon be removed
 								// and all subsequent calculations on it will result in a 0 add to accel.
-								continue outerLoop;								
+								continue outerLoop;
 							}
 						}
 					}
@@ -348,7 +348,7 @@ APP.simulation = (function simulation(THREE) {
 					accelerationDirection = positionDiff.normalize(); // for "this" object
 
 					calculate = true;
-					if (thisState.isLocked || (thisState.respectOnlyLocked && !otherState.isLocked)) {
+					if (thisBody.isLocked || (thisBody.respectOnlyLocked && !otherBody.isLocked)) {
 						calculate = false;
 					}
 
@@ -357,7 +357,7 @@ APP.simulation = (function simulation(THREE) {
 					}
 
 					calculate = true;
-					if (otherState.isLocked || (otherState.respectOnlyLocked && !thisState.isLocked)) {
+					if (otherBody.isLocked || (otherBody.respectOnlyLocked && !thisBody.isLocked)) {
 						calculate = false;
 					}
 
