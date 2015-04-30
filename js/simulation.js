@@ -260,6 +260,8 @@ APP.simulation = (function simulation(THREE) {
 			var accelerationDirection;
 			var adjustedGravity = state.gravity * state.gravityMultiplier;
 			var adjustedGravityPerDistanceSquared;
+			var accelerationScalar;
+			var accelerationVector;
 
 			var distanceSq;
 			var collisionDistanceSq;
@@ -268,7 +270,7 @@ APP.simulation = (function simulation(THREE) {
 			var finalMass;
 			var finalVelocity;
 			var finalRadius;
-
+			
 			var calculate;
 
 			outerLoop:
@@ -354,6 +356,9 @@ APP.simulation = (function simulation(THREE) {
 
 					if (calculate) {
 						//calculate accel Vector for 'this' object.
+						accelerationScalar = adjustedGravityPerDistanceSquared * otherMass;
+						accelerationVector = cloneVector(accelerationDirection).multiplyScalar(accelerationScalar);
+						thisBody.thisFrameAcceleration.add(accelerationVector);
 					}
 
 					calculate = true;
@@ -364,6 +369,9 @@ APP.simulation = (function simulation(THREE) {
 					if (calculate) {
 						accelerationDirection.negate();	// for "other" object
 						//calculate accel Vector for 'other' object.
+						accelerationScalar = adjustedGravityPerDistanceSquared * thisMass;
+						accelerationVector = accelerationDirection.multiplyScalar(accelerationScalar);
+						otherBody.thisFrameAcceleration.add(accelerationVector);
 					}
 				}
 			}
