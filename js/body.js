@@ -72,13 +72,13 @@ APP.body = (function body(THREE) {
 		var trailGeometry = new THREE.Geometry();
 		var trailMaterial = new THREE.LineBasicMaterial({color: 0x0000ff});
 
-		var a = [];
+		var vertices = [];
 
 		for (var i = 0; i < state.trailLength; i++) {
-			a.push(new THREE.Vector3(state.position.x, state.position.y, state.position.z));
+			vertices.push(new THREE.Vector3(state.position.x, state.position.y, state.position.z));
 		}
 
-		trailGeometry.vertices = a;
+		trailGeometry.vertices = vertices;
 		trailGeometry.dynamic = true;
 
 		state.trail = new THREE.Line(trailGeometry, trailMaterial);
@@ -99,7 +99,7 @@ APP.body = (function body(THREE) {
 		
 		var setRadius = function setRadius(r) {
 			state.radius = r;
-			state.radiusChanged = true;	
+			state.radiusChanged = true;
 		};
 
 		return {

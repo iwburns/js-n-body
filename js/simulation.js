@@ -207,7 +207,7 @@ APP.simulation = (function simulation(THREE) {
 					// velocity is in meters / second
 					velocity: velocity,
 					isLocked: false,
-					drawLines: state.drawLines,
+					drawTrails: state.drawTrails,
 					totalMass: state.roughTotalMass,
 					trailLength: state.trailLength
 				});
@@ -384,6 +384,9 @@ APP.simulation = (function simulation(THREE) {
 			var thisBody;
 			
 			var newBodyArray = [];
+			
+			//miliseconds to seconds
+			delta /= 1000;
 
 			for (i = 0; i < arrayLen; ++i) {
 				thisBody = bodyArray[i].getState();
@@ -391,8 +394,8 @@ APP.simulation = (function simulation(THREE) {
 				if (thisBody.mass === 0) {
 					scene.remove(thisBody.mesh);
 					
-					if (thisBody.drawLines) {
-						scene.remove(thisBody.line);
+					if (thisBody.drawTrails) {
+						scene.remove(thisBody.trail);
 					}
 					
 					continue;
@@ -404,18 +407,26 @@ APP.simulation = (function simulation(THREE) {
 					continue;
 				}
 				
-				//miliseconds to seconds
-				delta /= 1000;
-				
 				if (thisBody.radiusChanged) {
 					thisBody.radiusChanged = false;
 					
 					scene.remove(thisBody.mesh);
 					
-					//TODO: create new mesh
+					var geometry = new THREE.SphereGeometry(thisBody.radius, defaults.widthSegements, defaults.heightSegments);
+					var material = thisBody.defaults.material;
+			
+					material.color = 1 - (thisBody.mass / thisBody.totalMass) - 0.2; // todo: this will need to be changed
+					if (material.color > 1) {
+						material.color = 1;
+					}
+					
+					thisBody.mesh = new THREE.Mesh(geometry, material);
 					
 					scene.add(thisBody.mesh);
 					
+					thisBody.mesh.translateX(thisBody.position.x);
+					thisBody.mesh.translateY(thisBody.position.y);
+					thisBody.mesh.translateZ(thisBody.position.z);
 				}
 				
 				var accelerationVector = thisBody.thisFrameAccel;
@@ -433,12 +444,11 @@ APP.simulation = (function simulation(THREE) {
 				thisBody.mesh.translateY(positionDelta.y);
 				thisBody.mesh.translateZ(positionDelta.z);
 				
-				if (thisBody.drawLines) {
-					var newVertices = thisBody.line.geometry.vertices;
-					newVertices.pop();
-					newVertices.unshift(cloneVector(thisBody.position));
-					thisBody.line.geometry.vertices = newVertices; //TODO: this shouldn't be necessary since newVetices is just a reference to the real array.
-					thisBody.line.geometry.verticesNeedUpdate = true;
+				if (thisBody.drawTrails) {
+					var vertices = thisBody.trail.geometry.vertices;
+					vertices.pop();
+					vertices.unshift(cloneVector(thisBody.position));
+					thisBody.trail.geometry.verticesNeedUpdate = true;
 				}
 				
 				thisBody.thisFrameAccel = new THREE.Vector3();
