@@ -323,7 +323,7 @@ APP.simulation = (function simulation(THREE) {
 							if (thisRadius >= otherRadius) {
 								thisBody.velocity = cloneVector(finalVelocity); // this may not be necessary
 								thisBody.mass = finalMass;
-								thisBody.radius = finalRadius;
+								thisBody.setRadius(finalRadius); // we use this so that we don't have to set "radiusChanged" manually.
 								otherBody.mass = 0;
 
 								// we should keep calculating for "this" object (bodyArray[i])
@@ -334,7 +334,7 @@ APP.simulation = (function simulation(THREE) {
 							} else {
 								otherBody.velocity = cloneVector(finalVelocity); // this may not be necessary
 								otherBody.mass = finalMass;
-								otherBody.radius = finalRadius;
+								otherBody.setRadius(finalRadius); // we use this so that we don't have to set "radiusChanged" manually.
 								thisBody.mass = 0;
 
 								// we should stop calculating for "this" object (bodyArray[i])
@@ -377,13 +377,71 @@ APP.simulation = (function simulation(THREE) {
 			}
 		};
 
-		var updatePositions = function updatePositions() {
+		var updatePositions = function updatePositions(delta, scene) {
 			var i;
 			var bodyArray = state.bodyArray;
 			var arrayLen = bodyArray.length;
+			var thisBody;
+			
+			var newBodyArray = [];
 
 			for (i = 0; i < arrayLen; ++i) {
-				//update positions
+				thisBody = bodyArray[i].getState();
+				
+				if (thisBody.mass === 0) {
+					scene.remove(thisBody.mesh);
+					
+					if (thisBody.drawLines) {
+						scene.remove(thisBody.line);
+					}
+					
+					continue;
+				}
+				
+				newBodyArray.push(bodyArray[i]);
+				
+				if (thisBody.isLocked) {
+					continue;
+				}
+				
+				//miliseconds to seconds
+				delta /= 1000;
+				
+				if (thisBody.radiusChanged) {
+					thisBody.radiusChanged = false;
+					
+					scene.remove(thisBody.mesh);
+					
+					//TODO: create new mesh
+					
+					scene.add(thisBody.mesh);
+					
+				}
+				
+				var accelerationVector = thisBody.thisFrameAccel;
+			
+				// d = v1*t + (1/2)*a*(t^2)
+				var velocityTime = cloneVector(thisBody.velocity).multiplyScalar(delta);
+				var positionDelta = velocityTime.add(cloneVector(accelerationVector).multiplyScalar(0.5 * delta * delta));
+	
+				var velocityDelta = accelerationVector.multiplyScalar(delta);
+				
+				thisBody.position.add(positionDelta);
+				thisBody.velocity.add(velocityDelta);
+				
+				thisBody.mesh.translateX(positionDelta.x);
+				thisBody.mesh.translateY(positionDelta.y);
+				thisBody.mesh.translateZ(positionDelta.z);
+				
+				if (thisBody.drawLines) {
+					var newVertices = thisBody.line.geometry.vertices;
+					newVertices.pop();
+					newVertices.unshift(cloneVector(thisBody.position));
+					thisBody.line.geometry.vertices = newVertices; //TODO: this shouldn't be necessary since newVetices is just a reference to the real array.
+					thisBody.line.geometry.verticesNeedUpdate = true;
+				}
+				
+				thisBody.thisFrameAccel = new THREE.Vector3();
 			}
 		};
 

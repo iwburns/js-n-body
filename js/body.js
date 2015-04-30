@@ -96,9 +96,15 @@ APP.body = (function body(THREE) {
 		var getState = function getState() {
 			return state;
 		};
+		
+		var setRadius = function setRadius(r) {
+			state.radius = r;
+			state.radiusChanged = true;	
+		};
 
 		return {
-			getState: getState
+			getState: getState,
+			setRadius: setRadius
 		};
 	};
 
