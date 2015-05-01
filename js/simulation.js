@@ -8,6 +8,10 @@ APP.simulation = (function simulation(THREE) {
 	var make = function make(args, afterValidation) {
 
 		args = args || {};
+		
+		if (!args.scene) {
+			throw new Error('Simulation.make Error: No "scene" provided, "scene" is required.');
+		}
 
 		var defaults = {
 			timeMultiplier: 1000000,
@@ -31,7 +35,9 @@ APP.simulation = (function simulation(THREE) {
 
 			detectCollisions: true,
 
-			seed: Date.now()
+			seed: Date.now(),
+			
+			paused: false
 		};
 
 		var inputValidationSettings = {
@@ -61,15 +67,15 @@ APP.simulation = (function simulation(THREE) {
 
 			minParticleMass: args.minParticleMass || defaults.minParticleMass,
 			maxParticlemass: args.maxParticleMass || defaults.maxParticleMass,
-			
-			roughTotalMass: ( state.particleCount * (state.minParticleCount + state.maxParticleCount) / 2),
 
 			//drawTrails is checked below
 			trailLength: args.trailLength || defaults.trailLength,
 
 			startingVelocity: args.startingVelocity || defaults.startingVelocity,
 
-			seed: args.seed || defaults.seed
+			seed: args.seed || defaults.seed,
+			
+			scene: args.scene // guaranteed to exist
 		};
 
 		//need special checks for booleans
@@ -82,6 +88,11 @@ APP.simulation = (function simulation(THREE) {
 			state.detectCollisions = defaults.detectCollisions;
 		} else {
 			state.detectCollisions = args.detectCollisions;
+		}
+		if (args.paused === undefined) {
+			state.paused = defaults.paused;
+		} else {
+			state.paused = args.paused;
 		}
 
 		//check for NaN values from textfield inputs
@@ -145,6 +156,9 @@ APP.simulation = (function simulation(THREE) {
 		if (state.minParticleMass > state.maxParticleMass) {
 			state.maxParticleMass = state.minParticleMass;
 		}
+		
+		//this will be used for color calculations, there is probably a better way.
+		state.roughTotalMass = ( state.particleCount * (state.minParticleCount + state.maxParticleCount) / 2);
 
 		// ideally this will be used to set input values to their validated values
 		afterValidation();
@@ -174,7 +188,9 @@ APP.simulation = (function simulation(THREE) {
 			var velocity;
 
 			state.bodyArray = [];
-
+			
+			//build grid
+			
 			for (i = 0; i < state.particleCount; ++i) {
 
 				randX = (getRandom() * maxAbsRange * 2) - maxAbsRange;
@@ -208,7 +224,6 @@ APP.simulation = (function simulation(THREE) {
 					velocity: velocity,
 					isLocked: false,
 					drawTrails: state.drawTrails,
-					totalMass: state.roughTotalMass,
 					trailLength: state.trailLength
 				});
 
@@ -230,9 +245,10 @@ APP.simulation = (function simulation(THREE) {
 
 		var update = function update() {
 
-			updateSingleThreaded();
-
-			updatePositions();
+			if (!state.paused) {
+				updateSingleThreaded();
+				updatePositions();
+			}
 
 		};
 		
@@ -377,7 +393,7 @@ APP.simulation = (function simulation(THREE) {
 			}
 		};
 
-		var updatePositions = function updatePositions(delta, scene) {
+		var updatePositions = function updatePositions(delta) {
 			var i;
 			var bodyArray = state.bodyArray;
 			var arrayLen = bodyArray.length;
@@ -392,12 +408,11 @@ APP.simulation = (function simulation(THREE) {
 				thisBody = bodyArray[i].getState();
 				
 				if (thisBody.mass === 0) {
-					scene.remove(thisBody.mesh);
+					state.scene.remove(thisBody.mesh);
 					
 					if (thisBody.drawTrails) {
-						scene.remove(thisBody.trail);
+						state.scene.remove(thisBody.trail);
 					}
-					
 					continue;
 				}
 				
@@ -410,19 +425,19 @@ APP.simulation = (function simulation(THREE) {
 				if (thisBody.radiusChanged) {
 					thisBody.radiusChanged = false;
 					
-					scene.remove(thisBody.mesh);
+					state.scene.remove(thisBody.mesh);
 					
 					var geometry = new THREE.SphereGeometry(thisBody.radius, defaults.widthSegements, defaults.heightSegments);
 					var material = thisBody.defaults.material;
 			
-					material.color = 1 - (thisBody.mass / thisBody.totalMass) - 0.2; // todo: this will need to be changed
+					material.color = 1 - (thisBody.mass / state.roughtotalMass) - 0.2;
 					if (material.color > 1) {
 						material.color = 1;
 					}
 					
 					thisBody.mesh = new THREE.Mesh(geometry, material);
 					
-					scene.add(thisBody.mesh);
+					state.scene.add(thisBody.mesh);
 					
 					thisBody.mesh.translateX(thisBody.position.x);
 					thisBody.mesh.translateY(thisBody.position.y);

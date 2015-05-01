@@ -23,8 +23,6 @@ APP.body = (function body(THREE) {
 			position: new THREE.Vector3(),
 			velocity: new THREE.Vector3(),
 
-			totalMass: 1000, //need to figure out a better way to deal with colors than using this variable.
-
 			material: new THREE.MeshBasicMaterial({ color: 0x0000ff })
 		};
 		
@@ -39,8 +37,6 @@ APP.body = (function body(THREE) {
 			radius: args.radius || defaults.radius,
 			position: args.position || defaults.position,
 			velocity: args.velocity || defaults.velocity,
-
-			totalMass: args.totalMass || defaults.totalMass,
 
 			mesh: {},
 			trail: {},
