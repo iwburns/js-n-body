@@ -10,7 +10,7 @@ APP.simulation = (function simulation(THREE) {
 		args = args || {};
 		
 		if (!args.scene) {
-			throw new Error('Simulation.make Error: No "scene" provided, "scene" is required.');
+			throw new Error('Simulation Error: No "scene" provided in make(), "scene" is required.');
 		}
 
 		var defaults = {
