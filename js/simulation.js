@@ -161,7 +161,7 @@ APP.simulation = (function simulation(THREE) {
 		state.roughTotalMass = ( state.particleCount * (state.minParticleCount + state.maxParticleCount) / 2);
 
 		// ideally this will be used to set input values to their validated values
-		afterValidation();
+		afterValidation(state);
 
 		var init = function init() {
 			var i;
@@ -237,6 +237,10 @@ APP.simulation = (function simulation(THREE) {
 
 		var play = function play() {
 			state.paused = false;
+		};
+		
+		var togglePausePlay = function togglePausePlay() {
+			state.paused = !state.paused;	
 		};
 
 		var getState = function getState() {
@@ -478,6 +482,7 @@ APP.simulation = (function simulation(THREE) {
 			init: init,
 			play: play,
 			pause: pause,
+			togglePausePlay: togglePausePlay,
 			getState: getState,
 			update: update
 		};
