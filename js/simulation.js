@@ -247,11 +247,15 @@ APP.simulation = (function simulation(THREE) {
 			return state;
 		};
 
-		var update = function update() {
+		var update = function update(timeDelta, afterUpdate) {
+			
+			var simulationDelta;
 
 			if (!state.paused) {
+				simulationDelta = timeDelta * state.timeMultiplier;
 				updateSingleThreaded();
-				updatePositions();
+				updatePositions(simulationDelta);
+				afterUpdate(simulationDelta);
 			}
 
 		};

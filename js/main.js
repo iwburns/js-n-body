@@ -173,7 +173,102 @@ APP.main = (function main(THREE, Stats, $){
 		}
 		
 		function run() {
-			//run the simulation
+			now = Date.now();
+			timeDelta = now - lastFrameTime;
+			lastFrameTime = now;
+			
+			update(timeDelta);
+			render();
+			
+			if (showStats) {
+				stats.update();
+			}
+			
+			window.requestAnimationFrame(run);
+		}
+		
+		function update(timeDelta) {
+			
+			simulation.update(timeDelta, updateSimulationTime);
+			
+			updateCamera(timeDelta);
+			
+		}
+		
+		function updateCamera(timeDelta) {
+			updateCameraRotation(timeDelta);
+			updateCameraRigPosition(timeDelta);
+			
+			cameraRig.position.add(cameraOffset);
+			cameraOffset = new THREE.Vector3();
+		}
+		
+		function render() {
+			if (useStereoEffect) {
+				stereoEffect.render(scene, camera);
+			} else {
+				renderer.render(scene, camera);
+			}
+		}
+		
+		function updateCameraRotation(timeDelta) {
+			var rotationFactor = 0.00008 * timeDelta;
+
+			var deltaX = currentMousePos.x - lastMousePos.x;
+			var deltaY = currentMousePos.y - lastMousePos.y;
+	
+			cameraRig.rotation.y -= deltaX * rotationFactor;
+			camera.rotation.x -= deltaY * rotationFactor;
+	
+			lastMousePos = currentMousePos;
+		}
+		
+		function updateCameraRigPosition(timeDelta) {
+			var motionFactor = motionMultiplier * timeDelta;
+
+			var motion = new THREE.Vector3();
+			var moved = false;
+	
+			if (keydown["W".charCodeAt(0)]) {
+				motion.z -= motionFactor;
+				moved = true;
+			}
+			if (keydown["S".charCodeAt(0)]) {
+				motion.z += motionFactor;
+				moved = true;
+			}
+			if (keydown["A".charCodeAt(0)]) {
+				motion.x -= motionFactor;
+				moved = true;
+			}
+			if (keydown["D".charCodeAt(0)]) {
+				motion.x += motionFactor;
+				moved = true;
+			}
+			
+			if (keydown["G".charCodeAt(0)]) {
+				if ( !gridHelperExists ) {
+					gridHelperExists = true;
+					gridHelper = createGrid();
+					scene.add(gridHelper);
+				} else {
+					gridHelperExists = false;
+					scene.remove(gridHelper);
+				}
+				keydown["G".charCodeAt(0)] = false;
+			}
+			if (keydown["P".charCodeAt(0)]) {
+				togglePausePlay();
+				keydown["P".charCodeAt(0)] = false;
+			}
+			if (keydown["R".charCodeAt(0)]) {
+				$("button#restartButton").click();
+				keydown["R".charCodeAt(0)] = false;
+			}
+	
+			if (moved) {
+				cameraOffset.add(camera.localToWorld(motion).sub(cameraRig.position));
+			}
 		}
 		
 		function togglePausePlay() {
@@ -224,5 +319,15 @@ APP.main = (function main(THREE, Stats, $){
 	
 			$("#simulationTime").html(simulationTime);
 		}
-	
+		
+		function createGrid() {
+			var simState = simulation.getState();
+			var grid = new THREE.GridHelper( simState.gridSize, simState.gridSpacing );
+			grid.frustumCulled = false;
+			return grid;
+		}
+		
+		return {
+			init: init
+		};
 }(THREE, Stats, jQuery));
