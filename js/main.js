@@ -149,9 +149,19 @@ APP.main = (function main(THREE, Stats, $){
 			currentSimulationTimeMillis = 0;
 			
 			scene = new THREE.Scene();
+			config.scene = scene;
 			
 			config.afterValidation = function afterValidation(state) {
-				//todo: set html values here.
+				$("#numParticles").val(state.particleCount);
+				$("#trailLength").val(state.trailLength);
+				$("#minSize").val(state.minParticleSize);
+				$("#maxSize").val(state.maxParticleSize);
+				$("#minMass").val(state.minParticleMass);
+				$("#maxMass").val(state.maxParticleMass);
+				$("#startingVelocity").val(state.startingSpeed);
+				$("#gridSize").val(state.gridSize);
+				$("#timeMultiplier").val(state.timeMultiplier);
+				$("#currentSeed").html(state.seed);
 			};
 			
 			simulation = APP.simulation.make(config);
@@ -189,10 +199,17 @@ APP.main = (function main(THREE, Stats, $){
 		
 		function update(timeDelta) {
 			
-			simulation.update(timeDelta, updateSimulationTime);
+			simulation.update(timeDelta, afterUpdate);
 			
 			updateCamera(timeDelta);
 			
+		}
+		
+		function afterUpdate(data) {
+			updateSimulationTime(data.simulationDelta);
+			if (data.particleCountChanged) {
+				$("#currentNumParticles").html(data.currentNumParticles);
+			}
 		}
 		
 		function updateCamera(timeDelta) {
@@ -247,7 +264,7 @@ APP.main = (function main(THREE, Stats, $){
 			}
 			
 			if (keydown["G".charCodeAt(0)]) {
-				if ( !gridHelperExists ) {
+				if (!gridHelperExists) {
 					gridHelperExists = true;
 					gridHelper = createGrid();
 					scene.add(gridHelper);

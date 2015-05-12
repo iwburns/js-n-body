@@ -31,7 +31,7 @@ APP.simulation = (function simulation(THREE) {
 			drawTrails: false,
 			trailLength: 100,
 
-			startingVelocity: 1,
+			startingSpeed: 1,
 
 			detectCollisions: true,
 
@@ -71,7 +71,7 @@ APP.simulation = (function simulation(THREE) {
 			//drawTrails is checked below
 			trailLength: args.trailLength || defaults.trailLength,
 
-			startingVelocity: args.startingVelocity || defaults.startingVelocity,
+			startingSpeed: args.startingSpeed || defaults.startingSpeed,
 
 			seed: args.seed || defaults.seed,
 			
@@ -108,8 +108,8 @@ APP.simulation = (function simulation(THREE) {
 		if (state.maxParticleMass !== state.maxParticleMass) {
 			state.maxParticleMass = defaults.maxParticleMass;
 		}
-		if (state.startingVelocity !== state.startingVelocity) {
-			state.startingVelocity = defaults.startingVelocity;
+		if (state.startingSpeed !== state.startingSpeed) {
+			state.startingSpeed = defaults.startingSpeed;
 		}
 
 		if (state.particleCount < 0) {
@@ -133,8 +133,8 @@ APP.simulation = (function simulation(THREE) {
 		if (state.maxParticleMass < 0) {
 			state.maxParticleMass = -state.maxParticleMass;
 		}
-		if (state.startingVelocity < 0) {
-			state.startingVelocity = -state.startingVelocity;
+		if (state.startingSpeed < 0) {
+			state.startingSpeed = -state.startingSpeed;
 		}
 
 		if (state.particleCount < inputValidationSettings.minParticleCount) {
@@ -209,7 +209,7 @@ APP.simulation = (function simulation(THREE) {
 
 				velocity = new THREE.Vector3(randVX, randVY, randVZ);
 				velocity.normalize();
-				velocity.multiplyScalar(state.startingVelocity / state.timeMultiplier);
+				velocity.multiplyScalar(state.startingSpeed / state.timeMultiplier);
 
 				state.bodyArray[i] = APP.body.make({
 					// position is in meters
@@ -250,12 +250,27 @@ APP.simulation = (function simulation(THREE) {
 		var update = function update(timeDelta, afterUpdate) {
 			
 			var simulationDelta;
+			var startingLength;
+			var endingLength;
 
 			if (!state.paused) {
+				
 				simulationDelta = timeDelta * state.timeMultiplier;
+				
+				startingLength = state.bodyArray.length;
+				
 				updateSingleThreaded();
 				updatePositions(simulationDelta);
-				afterUpdate(simulationDelta);
+				
+				endingLength = state.bodyArray.length;
+				
+				var data = {
+					simulationDelta: simulationDelta,
+					particleCountChanged: startingLength === endingLength,
+					currentNumParticles: endingLength
+				};
+				
+				afterUpdate(data);
 			}
 
 		};
@@ -476,6 +491,9 @@ APP.simulation = (function simulation(THREE) {
 				
 				thisBody.thisFrameAccel = new THREE.Vector3();
 			}
+			
+			
+			state.bodyArray = newBodyArray;
 		};
 
 		var cloneVector = function cloneVector(v) {
