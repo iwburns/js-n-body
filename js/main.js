@@ -123,19 +123,20 @@ APP.main = (function main(THREE, Stats, $){
 	
 			$("button#restartButton").click(function() {
 				var config = {};
-				config.numParticles = parseInt($("#numParticles").val());
+				console.log('restart');
+				config.particleCount = parseInt($("#numParticles").val());
 				config.trailLength = parseInt($("#trailLength").val());
-				config.minSize = parseFloat($("#minSize").val());
-				config.maxSize = parseFloat($("#maxSize").val());
-				config.minMass = parseFloat($("#minMass").val());
-				config.maxMass = parseFloat($("#maxMass").val());
-				config.startingVelocity = parseFloat($("#startingVelocity").val());
+				config.minParticleSize = parseFloat($("#minSize").val());
+				config.maxParticleSize = parseFloat($("#maxSize").val());
+				config.minParticleMass = parseFloat($("#minMass").val());
+				config.maxParticleMass = parseFloat($("#maxMass").val());
+				config.startingSpeed = parseFloat($("#startingSpeed").val());
 				config.gridSize = parseInt($("#gridSize").val());
-				config.drawLines = ($("input:radio[name=showTrails]:checked").val() === "true");
+				config.drawTrails = ($("input:radio[name=drawTrails]:checked").val() === "true");
 				config.seed = parseInt($("#seed").val());
 				config.timeMultiplier = parseInt($("#timeMultiplier").val());
 	
-				removeAllBodies();
+				console.log(config);
 				initSimulation(config);
 			});
 	
@@ -145,6 +146,8 @@ APP.main = (function main(THREE, Stats, $){
 		}
 		
 		function initSimulation(config) {
+			
+			config = config || {};
 			
 			currentSimulationTimeMillis = 0;
 			
@@ -165,6 +168,7 @@ APP.main = (function main(THREE, Stats, $){
 			};
 			
 			simulation = APP.simulation.make(config);
+			simulation.init();
 			
 			var simState = simulation.getState();
 			

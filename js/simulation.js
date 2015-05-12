@@ -5,7 +5,7 @@ var APP  = APP || {};
 APP.simulation = (function simulation(THREE) {
 	'use strict';
 
-	var make = function make(args, afterValidation) {
+	var make = function make(args) {
 
 		args = args || {};
 		
@@ -161,7 +161,7 @@ APP.simulation = (function simulation(THREE) {
 		state.roughTotalMass = ( state.particleCount * (state.minParticleCount + state.maxParticleCount) / 2);
 
 		// ideally this will be used to set input values to their validated values
-		afterValidation(state);
+		args.afterValidation(state);
 
 		var init = function init() {
 			var i;
@@ -186,10 +186,10 @@ APP.simulation = (function simulation(THREE) {
 			var mass;
 			var color;
 			var velocity;
+			
+			var bodyState;
 
 			state.bodyArray = [];
-			
-			//build grid
 			
 			for (i = 0; i < state.particleCount; ++i) {
 
@@ -226,7 +226,20 @@ APP.simulation = (function simulation(THREE) {
 					drawTrails: state.drawTrails,
 					trailLength: state.trailLength
 				});
+				
+				bodyState = state.bodyArray[i].getState();
+				
+				state.scene.add(bodyState.mesh);
 
+				if (bodyState.drawTrails) {
+					console.log("adding trails!");
+					state.scene.add(bodyState.trail);
+				}
+				
+				bodyState.mesh.translateX(bodyState.position.x);
+				bodyState.mesh.translateY(bodyState.position.y);
+				bodyState.mesh.translateZ(bodyState.position.z);
+				
 			}
 
 		};
@@ -362,7 +375,7 @@ APP.simulation = (function simulation(THREE) {
 							if (thisRadius >= otherRadius) {
 								thisBody.velocity = cloneVector(finalVelocity); // this may not be necessary
 								thisBody.mass = finalMass;
-								thisBody.setRadius(finalRadius); // we use this so that we don't have to set "radiusChanged" manually.
+								bodyArray[i].setRadius(finalRadius); // we use this so that we don't have to set "radiusChanged" manually.
 								otherBody.mass = 0;
 
 								// we should keep calculating for "this" object (bodyArray[i])
@@ -373,7 +386,7 @@ APP.simulation = (function simulation(THREE) {
 							} else {
 								otherBody.velocity = cloneVector(finalVelocity); // this may not be necessary
 								otherBody.mass = finalMass;
-								otherBody.setRadius(finalRadius); // we use this so that we don't have to set "radiusChanged" manually.
+								bodyArray[j].setRadius(finalRadius); // we use this so that we don't have to set "radiusChanged" manually.
 								thisBody.mass = 0;
 
 								// we should stop calculating for "this" object (bodyArray[i])
@@ -451,7 +464,7 @@ APP.simulation = (function simulation(THREE) {
 					state.scene.remove(thisBody.mesh);
 					
 					var geometry = new THREE.SphereGeometry(thisBody.radius, defaults.widthSegements, defaults.heightSegments);
-					var material = thisBody.defaults.material;
+					var material = bodyArray[i].getDefaults().material;
 			
 					material.color = 1 - (thisBody.mass / state.roughtotalMass) - 0.2;
 					if (material.color > 1) {
@@ -467,7 +480,7 @@ APP.simulation = (function simulation(THREE) {
 					thisBody.mesh.translateZ(thisBody.position.z);
 				}
 				
-				var accelerationVector = thisBody.thisFrameAccel;
+				var accelerationVector = thisBody.thisFrameAcceleration;
 			
 				// d = v1*t + (1/2)*a*(t^2)
 				var velocityTime = cloneVector(thisBody.velocity).multiplyScalar(delta);
@@ -489,7 +502,7 @@ APP.simulation = (function simulation(THREE) {
 					thisBody.trail.geometry.verticesNeedUpdate = true;
 				}
 				
-				thisBody.thisFrameAccel = new THREE.Vector3();
+				thisBody.thisFrameAcceleration = new THREE.Vector3();
 			}
 			
 			

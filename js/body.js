@@ -15,7 +15,7 @@ APP.body = (function body(THREE) {
 
 			isLocked: false,
 			respectOnlyLocked: false,
-			drawTrail: true,
+			drawTrails: true,
 			trailLength: 100,
 
 			mass: 1,
@@ -55,14 +55,14 @@ APP.body = (function body(THREE) {
 		} else {
 			state.respectOnlyLocked = args.respectOnlyLocked;
 		}
-		if (args.drawTrail === undefined) {
-			state.drawTrail = defaults.drawTrail;
+		if (args.drawTrails === undefined) {
+			state.drawTrails = defaults.drawTrails;
 		} else {
-			state.drawTrail = args.drawTrail;
+			state.drawTrails = args.drawTrails;
 		}
 
 		if (state.trailLength === 0) {
-			state.drawTrail = false;
+			state.drawTrails = false;
 		}
 
 		var trailGeometry = new THREE.Geometry();
@@ -93,6 +93,10 @@ APP.body = (function body(THREE) {
 			return state;
 		};
 		
+		var getDefaults = function getDefaults() {
+			return defaults;
+		};
+		
 		var setRadius = function setRadius(r) {
 			state.radius = r;
 			state.radiusChanged = true;
@@ -100,6 +104,7 @@ APP.body = (function body(THREE) {
 
 		return {
 			getState: getState,
+			getDefaults: getDefaults,
 			setRadius: setRadius
 		};
 	};
