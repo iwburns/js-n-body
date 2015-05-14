@@ -66,7 +66,7 @@ APP.simulation = (function simulation(THREE) {
 			maxParticleSize: args.maxParticleSize || defaults.maxParticleSize,
 
 			minParticleMass: args.minParticleMass || defaults.minParticleMass,
-			maxParticlemass: args.maxParticleMass || defaults.maxParticleMass,
+			maxParticleMass: args.maxParticleMass || defaults.maxParticleMass,
 
 			//drawTrails is checked below
 			trailLength: args.trailLength || defaults.trailLength,
@@ -232,7 +232,6 @@ APP.simulation = (function simulation(THREE) {
 				state.scene.add(bodyState.mesh);
 
 				if (bodyState.drawTrails) {
-					console.log("adding trails!");
 					state.scene.add(bodyState.trail);
 				}
 				
@@ -279,7 +278,7 @@ APP.simulation = (function simulation(THREE) {
 				
 				var data = {
 					simulationDelta: simulationDelta,
-					particleCountChanged: startingLength === endingLength,
+					particleCountChanged: startingLength !== endingLength,
 					currentNumParticles: endingLength
 				};
 				
@@ -463,7 +462,9 @@ APP.simulation = (function simulation(THREE) {
 					
 					state.scene.remove(thisBody.mesh);
 					
-					var geometry = new THREE.SphereGeometry(thisBody.radius, defaults.widthSegements, defaults.heightSegments);
+					var bodyDefaults = bodyArray[i].getDefaults();
+					
+					var geometry = new THREE.SphereGeometry(thisBody.radius, bodyDefaults.widthSegements, bodyDefaults.heightSegments);
 					var material = bodyArray[i].getDefaults().material;
 			
 					material.color = 1 - (thisBody.mass / state.roughtotalMass) - 0.2;

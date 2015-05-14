@@ -13,6 +13,7 @@ APP.main = (function main(THREE, Stats, $){
 		
 		scene,
 		renderer,
+		
 		camera,
 		cameraRig,
 		cameraOffset,
@@ -23,7 +24,7 @@ APP.main = (function main(THREE, Stats, $){
 		keydown = [],
 		
 		nearPlane = 0.1,
-		farPlane = 1000, 
+		farPlane = 1e6,
 		motionMultiplier,
 		
 		gridHelper,
@@ -123,7 +124,7 @@ APP.main = (function main(THREE, Stats, $){
 	
 			$("button#restartButton").click(function() {
 				var config = {};
-				console.log('restart');
+				
 				config.particleCount = parseInt($("#numParticles").val());
 				config.trailLength = parseInt($("#trailLength").val());
 				config.minParticleSize = parseFloat($("#minSize").val());
@@ -135,8 +136,7 @@ APP.main = (function main(THREE, Stats, $){
 				config.drawTrails = ($("input:radio[name=drawTrails]:checked").val() === "true");
 				config.seed = parseInt($("#seed").val());
 				config.timeMultiplier = parseInt($("#timeMultiplier").val());
-	
-				console.log(config);
+				
 				initSimulation(config);
 			});
 	
@@ -165,6 +165,7 @@ APP.main = (function main(THREE, Stats, $){
 				$("#gridSize").val(state.gridSize);
 				$("#timeMultiplier").val(state.timeMultiplier);
 				$("#currentSeed").html(state.seed);
+				$("#currentNumParticles").html(state.particleCount);
 			};
 			
 			simulation = APP.simulation.make(config);
@@ -182,6 +183,8 @@ APP.main = (function main(THREE, Stats, $){
 			
 			cameraRig.position.set(0, simState.gridSize, simState.gridSize);
 			camera.rotation.x -= Math.PI/4;
+			
+			motionMultiplier = 0.0005 * simState.gridSize;
 			
 			lastFrameTime = Date.now();
 		}
@@ -245,25 +248,33 @@ APP.main = (function main(THREE, Stats, $){
 		}
 		
 		function updateCameraRigPosition(timeDelta) {
-			var motionFactor = motionMultiplier * timeDelta;
+			var motionFactor;
 
 			var motion = new THREE.Vector3();
 			var moved = false;
 	
 			if (keydown["W".charCodeAt(0)]) {
-				motion.z -= motionFactor;
+				motion.z -= 1;
 				moved = true;
 			}
 			if (keydown["S".charCodeAt(0)]) {
-				motion.z += motionFactor;
+				motion.z += 1;
 				moved = true;
 			}
 			if (keydown["A".charCodeAt(0)]) {
-				motion.x -= motionFactor;
+				motion.x -= 1;
 				moved = true;
 			}
 			if (keydown["D".charCodeAt(0)]) {
-				motion.x += motionFactor;
+				motion.x += 1;
+				moved = true;
+			}
+			if (keydown[32]) { //space
+				motion.y += 1;
+				moved = true;
+			}
+			if (keydown[16]) { //shift
+				motion.y -= 1;
 				moved = true;
 			}
 			
@@ -288,17 +299,15 @@ APP.main = (function main(THREE, Stats, $){
 			}
 	
 			if (moved) {
+				motionFactor = motionMultiplier * timeDelta;
+				motion.normalize().multiplyScalar(motionFactor);
+				
 				cameraOffset.add(camera.localToWorld(motion).sub(cameraRig.position));
 			}
 		}
 		
 		function togglePausePlay() {
 			simulation.togglePausePlay();
-		}
-		
-		function removeAllBodies() {
-			console.log('remove all bodies (nothing right now)');
-			//todo: we shouldn't need this...
 		}
 		
 		function updateWindowSize() {
@@ -343,7 +352,7 @@ APP.main = (function main(THREE, Stats, $){
 		
 		function createGrid() {
 			var simState = simulation.getState();
-			var grid = new THREE.GridHelper( simState.gridSize, simState.gridSpacing );
+			var grid = new THREE.GridHelper( simState.gridSize, simState.gridSize / simState.gridSpacing );
 			grid.frustumCulled = false;
 			return grid;
 		}
