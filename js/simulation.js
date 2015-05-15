@@ -189,7 +189,7 @@ APP.simulation = (function simulation(THREE) {
 			
 			var body;
 
-			state.bodyArray = [];
+			state.bodyArray = new Array(state.particleCount);
 			
 			for (i = 0; i < state.particleCount; ++i) {
 
