@@ -158,7 +158,7 @@ APP.simulation = (function simulation(THREE) {
 		}
 		
 		//this will be used for color calculations, there is probably a better way.
-		state.roughTotalMass = ( state.particleCount * (state.minParticleCount + state.maxParticleCount) / 2);
+		state.roughTotalMass = ( state.particleCount * (state.minParticleMass + state.maxParticleMass) / 2);
 
 		// ideally this will be used to set input values to their validated values
 		args.afterValidation(state);
@@ -177,14 +177,13 @@ APP.simulation = (function simulation(THREE) {
 			var randVY;
 			var randVZ;
 
-			var randomSizeMassColor;
+			var randomSizeMass;
 
 			var radiusRange = state.maxParticleSize - state.minParticleSize;
 			var massRange = state.maxParticleMass - state.minParticleMass;
 
 			var radius;
 			var mass;
-			var color;
 			var velocity;
 			
 			var body;
@@ -197,11 +196,10 @@ APP.simulation = (function simulation(THREE) {
 				randY = (getRandom() * maxAbsRange * 2) - maxAbsRange;
 				randZ = (getRandom() * maxAbsRange * 2) - maxAbsRange;
 
-				randomSizeMassColor = getRandom();
+				randomSizeMass = getRandom();
 
-				radius = (randomSizeMassColor * radiusRange) + state.minParticleSize;
-				mass   = (randomSizeMassColor * massRange) + state.minParticleMass;
-				color = randomSizeMassColor * 0.5; // todo: this will need to be changed
+				radius = (randomSizeMass * radiusRange) + state.minParticleSize;
+				mass   = (randomSizeMass * massRange) + state.minParticleMass;
 
 				randVX = (getRandom() * 2) - 1;
 				randVY = (getRandom() * 2) - 1;
@@ -218,10 +216,9 @@ APP.simulation = (function simulation(THREE) {
 					radius: radius,
 					// mass is in kg
 					mass: mass,
-					// color: (new THREE.Color()).setHSL(color, 1, 0.5),
-					color: (new THREE.Color()).setRGB(color, color, color),
 					// velocity is in meters / second
 					velocity: velocity,
+					color: calculateColor(mass),
 					isLocked: false,
 					drawTrails: state.drawTrails,
 					trailLength: state.trailLength
@@ -431,7 +428,8 @@ APP.simulation = (function simulation(THREE) {
 			var i;
 			var bodyArray = state.bodyArray;
 			var arrayLen = bodyArray.length;
-			var thisBody;
+			var body;
+			var bodyState;
 			
 			//we can't use a fixed array here because we don't know how many bodies will be removed.
 			var newBodyArray = [];
@@ -440,70 +438,68 @@ APP.simulation = (function simulation(THREE) {
 			delta /= 1000;
 
 			for (i = 0; i < arrayLen; ++i) {
-				thisBody = bodyArray[i].getState();
+				body = bodyArray[i];
+				bodyState = body.getState();
 				
-				if (thisBody.mass === 0) {
-					state.scene.remove(thisBody.mesh);
+				if (bodyState.mass === 0) {
+					state.scene.remove(bodyState.mesh);
 					
-					if (thisBody.drawTrails) {
-						state.scene.remove(thisBody.trail);
+					if (bodyState.drawTrails) {
+						state.scene.remove(bodyState.trail);
 					}
 					continue;
 				}
 				
-				newBodyArray.push(bodyArray[i]);
+				newBodyArray.push(body);
 				
-				if (thisBody.isLocked) {
+				if (bodyState.isLocked) {
 					continue;
 				}
 				
-				if (thisBody.radiusChanged) {
-					thisBody.radiusChanged = false;
+				if (bodyState.radiusChanged) {
+					bodyState.radiusChanged = false;
 					
-					state.scene.remove(thisBody.mesh);
+					state.scene.remove(bodyState.mesh);
 					
-					var bodyDefaults = bodyArray[i].getDefaults();
+					var bodyDefaults = body.getDefaults();
 					
-					var geometry = new THREE.SphereGeometry(thisBody.radius, bodyDefaults.widthSegements, bodyDefaults.heightSegments);
-					var material = bodyArray[i].getDefaults().material;
+					var geometry = new THREE.SphereGeometry(bodyState.radius, bodyDefaults.widthSegements, bodyDefaults.heightSegments);
+					var material = body.getDefaults().material;
 			
-					material.color = 1 - (thisBody.mass / state.roughtotalMass) - 0.2;
-					if (material.color > 1) {
-						material.color = 1;
-					}
+					material.color = calculateColor(bodyState.mass);
 					
-					thisBody.mesh = new THREE.Mesh(geometry, material);
+					bodyState.mesh = new THREE.Mesh(geometry, material);
 					
-					state.scene.add(thisBody.mesh);
+					state.scene.add(bodyState.mesh);
 					
-					thisBody.mesh.translateX(thisBody.position.x);
-					thisBody.mesh.translateY(thisBody.position.y);
-					thisBody.mesh.translateZ(thisBody.position.z);
+					bodyState.mesh.translateX(bodyState.position.x);
+					bodyState.mesh.translateY(bodyState.position.y);
+					bodyState.mesh.translateZ(bodyState.position.z);
 				}
 				
-				var accelerationVector = thisBody.thisFrameAcceleration;
+				var accelerationVector = bodyState.thisFrameAcceleration;
 			
 				// d = v1*t + (1/2)*a*(t^2)
-				var velocityTime = cloneVector(thisBody.velocity).multiplyScalar(delta);
+				var velocityTime = cloneVector(bodyState.velocity).multiplyScalar(delta);
 				var positionDelta = velocityTime.add(cloneVector(accelerationVector).multiplyScalar(0.5 * delta * delta));
 	
 				var velocityDelta = accelerationVector.multiplyScalar(delta);
 				
-				thisBody.position.add(positionDelta);
-				thisBody.velocity.add(velocityDelta);
+				bodyState.position.add(positionDelta);
+				bodyState.velocity.add(velocityDelta);
 				
-				thisBody.mesh.translateX(positionDelta.x);
-				thisBody.mesh.translateY(positionDelta.y);
-				thisBody.mesh.translateZ(positionDelta.z);
+				bodyState.mesh.translateX(positionDelta.x);
+				bodyState.mesh.translateY(positionDelta.y);
+				bodyState.mesh.translateZ(positionDelta.z);
 				
-				if (thisBody.drawTrails) {
-					var vertices = thisBody.trail.geometry.vertices;
+				if (bodyState.drawTrails) {
+					var vertices = bodyState.trail.geometry.vertices;
 					vertices.pop();
-					vertices.unshift(cloneVector(thisBody.position));
-					thisBody.trail.geometry.verticesNeedUpdate = true;
+					vertices.unshift(cloneVector(bodyState.position));
+					bodyState.trail.geometry.verticesNeedUpdate = true;
 				}
 				
-				thisBody.thisFrameAcceleration = new THREE.Vector3();
+				bodyState.thisFrameAcceleration = new THREE.Vector3();
 			}
 			
 			
@@ -512,6 +508,14 @@ APP.simulation = (function simulation(THREE) {
 
 		var cloneVector = function cloneVector(v) {
 			return new THREE.Vector3(v.x, v.y, v.z);
+		};
+		
+		var calculateColor = function calculateColor(mass) {
+			var rgb = 0.75 - (mass / state.roughTotalMass);
+			if (rgb > 1) {
+				rgb = 1;
+			}
+			return new THREE.Color(rgb, rgb, rgb);
 		};
 
 		return {

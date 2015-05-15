@@ -206,17 +206,16 @@ APP.main = (function main(THREE, Stats, $){
 		
 		function update(timeDelta) {
 			
-			simulation.update(timeDelta, afterUpdate);
+			simulation.update(timeDelta, function (data) {
+				
+				updateSimulationTime(data.simulationDelta);
+				if (data.particleCountChanged) {
+					$("#currentNumParticles").html(data.currentNumParticles);
+				}
+				
+			});
 			
 			updateCamera(timeDelta);
-			
-		}
-		
-		function afterUpdate(data) {
-			updateSimulationTime(data.simulationDelta);
-			if (data.particleCountChanged) {
-				$("#currentNumParticles").html(data.currentNumParticles);
-			}
 		}
 		
 		function updateCamera(timeDelta) {
