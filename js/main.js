@@ -211,7 +211,8 @@ APP.main = (function main(THREE, Stats, $){
 			updateCamera(timeDelta);
 			
 		}
-		
+
+	//mrg: consider declaring this inline above, since you dont expect it to be called from anywhere else
 		function afterUpdate(data) {
 			updateSimulationTime(data.simulationDelta);
 			if (data.particleCountChanged) {
@@ -226,7 +227,9 @@ APP.main = (function main(THREE, Stats, $){
 			cameraRig.position.add(cameraOffset);
 			cameraOffset = new THREE.Vector3();
 		}
-		
+
+	//mrg: I would probably leave this the way it is, but - you could set the render variable to be one of two functions only when the value of useStereoEffect changes
+	//so that you do the decision once but not on every render iteration
 		function render() {
 			if (useStereoEffect) {
 				stereoEffect.render(scene, camera);

@@ -13,6 +13,8 @@ APP.simulation = (function simulation(THREE) {
 			throw new Error('Simulation Error: No "scene" provided in make(), "scene" is required.');
 		}
 
+	//mrg: es6 const/let is going to make this all much better one day.
+	//for fun, you might want to try out babel's transpiler, I bet it wouldnt hurt anything
 		var defaults = {
 			timeMultiplier: 1000000,
 			gravityMultiplier: 1,
@@ -78,6 +80,7 @@ APP.simulation = (function simulation(THREE) {
 			scene: args.scene // guaranteed to exist
 		};
 
+	//mrg: another good case for _.merge (see my comment in body.js)
 		//need special checks for booleans
 		if (args.drawTrails === undefined) {
 			state.drawTrails = defaults.drawTrails;
@@ -95,6 +98,7 @@ APP.simulation = (function simulation(THREE) {
 			state.paused = args.paused;
 		}
 
+	//mrg: wouldnt validation stuff be better suited in main? im not sure, just a thought
 		//check for NaN values from textfield inputs
 		if (state.minParticleSize !== state.minParticleSize) {
 			state.minParticleSize = defaults.minParticleSize;
@@ -190,7 +194,8 @@ APP.simulation = (function simulation(THREE) {
 			var bodyState;
 
 			state.bodyArray = [];
-			
+
+
 			for (i = 0; i < state.particleCount; ++i) {
 
 				randX = (getRandom() * maxAbsRange * 2) - maxAbsRange;
@@ -211,6 +216,8 @@ APP.simulation = (function simulation(THREE) {
 				velocity.normalize();
 				velocity.multiplyScalar(state.startingSpeed / state.timeMultiplier);
 
+			//mrg: why not make the body into a variable and then get its state for bodyState below and then push into the array?
+			//right now you are assigning, then looking up out of the array, which I bet is a bit slower.
 				state.bodyArray[i] = APP.body.make({
 					// position is in meters
 					position: new THREE.Vector3(randX,randY,randZ),
@@ -400,6 +407,8 @@ APP.simulation = (function simulation(THREE) {
 
 					accelerationDirection = positionDiff.normalize(); // for "this" object
 
+				//mrg: could be :
+				//calculate = !(thisBody.isLocked || (thisBody.respectOnlyLocked && !otherBody.isLocked));
 					calculate = true;
 					if (thisBody.isLocked || (thisBody.respectOnlyLocked && !otherBody.isLocked)) {
 						calculate = false;
@@ -412,6 +421,8 @@ APP.simulation = (function simulation(THREE) {
 						thisBody.thisFrameAcceleration.add(accelerationVector);
 					}
 
+				//mrg: could be:
+				//calculate = !(otherBody.isLocked || (otherBody.respectOnlyLocked && !thisBody.isLocked))
 					calculate = true;
 					if (otherBody.isLocked || (otherBody.respectOnlyLocked && !thisBody.isLocked)) {
 						calculate = false;
@@ -436,7 +447,7 @@ APP.simulation = (function simulation(THREE) {
 			
 			var newBodyArray = [];
 			
-			//miliseconds to seconds
+			//milliseconds to seconds
 			delta /= 1000;
 
 			for (i = 0; i < arrayLen; ++i) {
