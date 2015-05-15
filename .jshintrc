@@ -1,0 +1,10 @@
+{
+  "node": false
+  ,"esnext": false
+  ,"globals": ["$"]
+  ,"undef": true
+  ,"unused": true
+  ,"laxcomma": true
+  ,"bitwise": true
+  ,"eqeqeq": true
+}

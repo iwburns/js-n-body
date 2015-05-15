@@ -10,7 +10,7 @@ APP.body = (function body(THREE) {
 		args = args || {};
 
 		var defaults = {
-			widthSegements: 15,
+			widthSegments: 15,
 			heightSegments: 15,
 
 			isLocked: false,
@@ -44,6 +44,8 @@ APP.body = (function body(THREE) {
 			radiusChanged: false
 		};
 
+	//mrg: consider using lodash's _.merge function here: create state with defaults and then merge args onto it: _.merge(state, args)
+	//or write a function to abstract out the undefined check: state.isLocked = param(args, defaults, "isLocked");
 		//need special checks for booleans
 		if (args.isLocked === undefined) {
 			state.isLocked = defaults.isLocked;
@@ -70,6 +72,7 @@ APP.body = (function body(THREE) {
 
 		var vertices = [];
 
+	//mrg: lodash's _.times() would be nice here if it didnt hurt performance
 		for (var i = 0; i < state.trailLength; i++) {
 			vertices.push(new THREE.Vector3(state.position.x, state.position.y, state.position.z));
 		}
@@ -80,7 +83,7 @@ APP.body = (function body(THREE) {
 		state.trail = new THREE.Line(trailGeometry, trailMaterial);
 		state.trail.frustumCulled = false;
 
-		var geometry = new THREE.SphereGeometry(args.radius, defaults.widthSegements, defaults.heightSegments);
+		var geometry = new THREE.SphereGeometry(args.radius, defaults.widthSegments, defaults.heightSegments);
 		var material = defaults.material;
 
 		if (args.color !== undefined) {
