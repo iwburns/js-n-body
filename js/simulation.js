@@ -433,6 +433,7 @@ APP.simulation = (function simulation(THREE) {
 			var arrayLen = bodyArray.length;
 			var thisBody;
 			
+			//we can't use a fixed array here because we don't know how many bodies will be removed.
 			var newBodyArray = [];
 			
 			//miliseconds to seconds
