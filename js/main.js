@@ -161,7 +161,7 @@ APP.main = (function main(THREE, Stats, $){
 				$("#maxSize").val(state.maxParticleSize);
 				$("#minMass").val(state.minParticleMass);
 				$("#maxMass").val(state.maxParticleMass);
-				$("#startingVelocity").val(state.startingSpeed);
+				$("#startingSpeed").val(state.startingSpeed);
 				$("#gridSize").val(state.gridSize);
 				$("#timeMultiplier").val(state.timeMultiplier);
 				$("#currentSeed").html(state.seed);

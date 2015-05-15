@@ -187,7 +187,7 @@ APP.simulation = (function simulation(THREE) {
 			var color;
 			var velocity;
 			
-			var bodyState;
+			var body;
 
 			state.bodyArray = [];
 			
@@ -211,9 +211,9 @@ APP.simulation = (function simulation(THREE) {
 				velocity.normalize();
 				velocity.multiplyScalar(state.startingSpeed / state.timeMultiplier);
 
-				state.bodyArray[i] = APP.body.make({
+				body = APP.body.make({
 					// position is in meters
-					position: new THREE.Vector3(randX,randY,randZ),
+					position: new THREE.Vector3(randX, randY, randZ),
 					// radius is in meters
 					radius: radius,
 					// mass is in kg
@@ -227,20 +227,25 @@ APP.simulation = (function simulation(THREE) {
 					trailLength: state.trailLength
 				});
 				
-				bodyState = state.bodyArray[i].getState();
+				addToScene(body);
 				
-				state.scene.add(bodyState.mesh);
-
-				if (bodyState.drawTrails) {
-					state.scene.add(bodyState.trail);
-				}
-				
-				bodyState.mesh.translateX(bodyState.position.x);
-				bodyState.mesh.translateY(bodyState.position.y);
-				bodyState.mesh.translateZ(bodyState.position.z);
-				
+				state.bodyArray[i] = body;
 			}
 
+		};
+		
+		var addToScene = function addToScene(body) {
+			var bodyState = body.getState();
+				
+			state.scene.add(bodyState.mesh);
+
+			if (bodyState.drawTrails) {
+				state.scene.add(bodyState.trail);
+			}
+			
+			bodyState.mesh.translateX(bodyState.position.x);
+			bodyState.mesh.translateY(bodyState.position.y);
+			bodyState.mesh.translateZ(bodyState.position.z);
 		};
 
 		var pause = function pause() {
@@ -322,7 +327,7 @@ APP.simulation = (function simulation(THREE) {
 			var finalVelocity;
 			var finalRadius;
 			
-			var calculate;
+			var dontCalculate;
 
 			outerLoop:
 			for (i = 0; i < arrayLen; ++i) {
@@ -400,24 +405,18 @@ APP.simulation = (function simulation(THREE) {
 
 					accelerationDirection = positionDiff.normalize(); // for "this" object
 
-					calculate = true;
-					if (thisBody.isLocked || (thisBody.respectOnlyLocked && !otherBody.isLocked)) {
-						calculate = false;
-					}
+					dontCalculate = thisBody.isLocked || (thisBody.respectOnlyLocked && !otherBody.isLocked);
 
-					if (calculate) {
+					if (!dontCalculate) {
 						//calculate accel Vector for 'this' object.
 						accelerationScalar = adjustedGravityPerDistanceSquared * otherMass;
 						accelerationVector = cloneVector(accelerationDirection).multiplyScalar(accelerationScalar);
 						thisBody.thisFrameAcceleration.add(accelerationVector);
 					}
 
-					calculate = true;
-					if (otherBody.isLocked || (otherBody.respectOnlyLocked && !thisBody.isLocked)) {
-						calculate = false;
-					}
+					dontCalculate = otherBody.isLocked || (otherBody.respectOnlyLocked && !thisBody.isLocked);
 
-					if (calculate) {
+					if (!dontCalculate) {
 						accelerationDirection.negate();	// for "other" object
 						//calculate accel Vector for 'other' object.
 						accelerationScalar = adjustedGravityPerDistanceSquared * thisMass;
