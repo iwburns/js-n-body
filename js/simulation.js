@@ -71,7 +71,7 @@ APP.simulation = (function simulation(THREE) {
 			//drawTrails is checked below
 			trailLength: args.trailLength || defaults.trailLength,
 
-			startingSpeed: args.startingSpeed || defaults.startingSpeed,
+			//startingSpeed is checked below
 
 			seed: args.seed || defaults.seed,
 			
@@ -83,6 +83,12 @@ APP.simulation = (function simulation(THREE) {
 			state.drawTrails = defaults.drawTrails;
 		} else {
 			state.drawTrails = args.drawTrails;
+		}
+		//startingSpeed isn't a boolean but 0 == false so we have to do a special check.
+		if (args.startingSpeed === undefined) {
+			state.startingSpeed = defaults.startingSpeed;
+		} else {
+			state.startingSpeed = args.startingSpeed;
 		}
 		if (args.detectCollisions === undefined) {
 			state.detectCollisions = defaults.detectCollisions;
