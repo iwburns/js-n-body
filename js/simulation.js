@@ -178,7 +178,7 @@ APP.simulation = (function simulation(THREE) {
 			var colors = new Float32Array(state.particleCount * 3);
 
 			var i;
-			var j;
+			var j = 0;
 			var maxAbsRange = state.gridSize;
 			
 			var getRandom = new Math.seedrandom(state.seed);
@@ -221,9 +221,9 @@ APP.simulation = (function simulation(THREE) {
 				positions[j    ] = randX;
 				positions[j + 1] = randY;
 				positions[j + 2] = randZ;
-				colors[j    ] = 0;
-				colors[j + 1] = 0;
-				colors[j + 2] = 0;
+				colors[j    ] = color.r;
+				colors[j + 1] = color.g;
+				colors[j + 2] = color.b;
 				j += 3;
 
 				randVX = (getRandom() * 2) - 1;
@@ -238,7 +238,7 @@ APP.simulation = (function simulation(THREE) {
 					// position is in meters
 					position: new THREE.Vector3(randX, randY, randZ),
 					// radius is in meters
-					radius: 0.0001,
+					radius: 1,
 					// mass is in kg
 					mass: mass,
 					// velocity is in meters / second
@@ -250,9 +250,14 @@ APP.simulation = (function simulation(THREE) {
 				});
 				
 				state.bodyArray[i] = body;
+
+				if (state.drawTrails) {
+					state.scene.add(body.getState().trail);
+				}
+
 			}
 
-			var pointSize = 1;
+			var pointSize = 5;
 
 			var geometry = new THREE.BufferGeometry();
 			var material = new THREE.PointsMaterial({
@@ -267,6 +272,8 @@ APP.simulation = (function simulation(THREE) {
 			state.pointCloud = new THREE.Points(geometry, material);
 
 			state.scene.add(state.pointCloud);
+
+
 		};
 
 		var pause = function pause() {
@@ -321,17 +328,11 @@ APP.simulation = (function simulation(THREE) {
 
 			var thisBody;
 			var thisPosition;
-			var thisVelocity;
 			var thisMass;
-			var thisRadius;
-			var thisMomentum;
 
 			var otherBody;
 			var otherPosition;
-			var otherVelocity;
 			var otherMass;
-			var otherRadius;
-			var otherMomentum;
 
 			var positionDiff;
 			var accelerationDirection;
@@ -341,12 +342,6 @@ APP.simulation = (function simulation(THREE) {
 			var accelerationVector;
 
 			var distanceSq;
-			var collisionDistanceSq;
-			var totalMomentum;
-
-			var finalMass;
-			var finalVelocity;
-			var finalRadius;
 			
 			var dontCalculate;
 
@@ -354,11 +349,6 @@ APP.simulation = (function simulation(THREE) {
 			for (i = 0; i < arrayLen; ++i) {
 
 				thisBody = bodyArray[i].getState();
-
-				if (thisBody.mass === 0) {
-					continue outerLoop;
-				}
-
 				thisPosition = thisBody.position;
 				thisMass = thisBody.mass;
 
@@ -366,61 +356,11 @@ APP.simulation = (function simulation(THREE) {
 				for (j = i + 1; j < arrayLen; ++j) {
 
 					otherBody = bodyArray[j].getState();
-
-					if (otherBody.mass === 0) {
-						continue innerLoop;
-					}
-
 					otherPosition = otherBody.position;
 					otherMass = otherBody.mass;
 
 					positionDiff = cloneVector(otherPosition).sub(thisPosition);
 					distanceSq = positionDiff.lengthSq();
-
-					if (state.detectCollisions) {
-
-						thisRadius = thisBody.radius;
-						otherRadius = otherBody.radius;
-						collisionDistanceSq = (thisRadius + otherRadius) * (thisRadius + otherRadius);
-
-						if (distanceSq <= collisionDistanceSq) {
-
-							thisVelocity = thisBody.velocity;
-							otherVelocity = otherBody.velocity;
-
-							//we don't want to modify the velocity vectors here so we must clone
-							thisMomentum = cloneVector(thisVelocity).multiplyScalar(thisMass);
-							otherMomentum = cloneVector(otherVelocity).multiplyScalar(otherMass);
-							totalMomentum = thisMomentum.add(otherMomentum);
-
-							finalMass = thisMass + otherMass;
-							finalVelocity = totalMomentum.divideScalar(finalMass);
-							finalRadius = Math.pow((thisRadius * thisRadius * thisRadius + otherRadius * otherRadius * otherRadius), 1/3);
-
-							if (thisRadius >= otherRadius) {
-								thisBody.velocity = cloneVector(finalVelocity); // this may not be necessary
-								thisBody.mass = finalMass;
-								bodyArray[i].setRadius(finalRadius); // we use this so that we don't have to set "radiusChanged" manually.
-								otherBody.mass = 0;
-
-								// we should keep calculating for "this" object (bodyArray[i])
-								// but we need to skip accel. calculations
-								// between the current "this" object and the current "other" object (bodyArray[j])
-								// because they will result in a 0 add to accel for "this" object.
-								continue innerLoop;
-							} else {
-								otherBody.velocity = cloneVector(finalVelocity); // this may not be necessary
-								otherBody.mass = finalMass;
-								bodyArray[j].setRadius(finalRadius); // we use this so that we don't have to set "radiusChanged" manually.
-								thisBody.mass = 0;
-
-								// we should stop calculating for "this" object (bodyArray[i])
-								// because this object will soon be removed
-								// and all subsequent calculations on it will result in a 0 add to accel.
-								continue outerLoop;
-							}
-						}
-					}
 
 					adjustedGravityPerDistanceSquared = adjustedGravity / distanceSq;
 
@@ -455,10 +395,7 @@ APP.simulation = (function simulation(THREE) {
 			var body;
 			var bodyState;
 
-			var positions;
-			
-			//we can't use a fixed array here because we don't know how many bodies will be removed.
-			var newBodyArray = [];
+			var positions = state.pointCloud.geometry.getAttribute('position');
 			
 			//miliseconds to seconds
 			delta /= 1000;
@@ -466,42 +403,6 @@ APP.simulation = (function simulation(THREE) {
 			for (i = 0; i < arrayLen; ++i) {
 				body = bodyArray[i];
 				bodyState = body.getState();
-				
-				// if (bodyState.mass === 0) {
-				// 	state.scene.remove(bodyState.mesh);
-					
-				// 	if (bodyState.drawTrails) {
-				// 		state.scene.remove(bodyState.trail);
-				// 	}
-				// 	continue;
-				// }
-				
-				newBodyArray.push(body);
-				
-				// if (bodyState.isLocked) {
-				// 	continue;
-				// }
-				
-				// if (bodyState.radiusChanged) {
-				// 	bodyState.radiusChanged = false;
-					
-				// 	state.scene.remove(bodyState.mesh);
-					
-				// 	var bodyDefaults = body.getDefaults();
-					
-				// 	var geometry = new THREE.SphereGeometry(bodyState.radius, bodyDefaults.widthSegements, bodyDefaults.heightSegments);
-				// 	var material = body.getDefaults().material;
-			
-				// 	material.color = calculateColor(bodyState.mass);
-					
-				// 	bodyState.mesh = new THREE.Mesh(geometry, material);
-					
-				// 	state.scene.add(bodyState.mesh);
-					
-				// 	bodyState.mesh.translateX(bodyState.position.x);
-				// 	bodyState.mesh.translateY(bodyState.position.y);
-				// 	bodyState.mesh.translateZ(bodyState.position.z);
-				// }
 				
 				var accelerationVector = bodyState.thisFrameAcceleration;
 			
@@ -514,18 +415,9 @@ APP.simulation = (function simulation(THREE) {
 				bodyState.position.add(positionDelta);
 				bodyState.velocity.add(velocityDelta);
 				
-				// bodyState.mesh.translateX(positionDelta.x);
-				// bodyState.mesh.translateY(positionDelta.y);
-				// bodyState.mesh.translateZ(positionDelta.z);
-
-				positions = state.pointCloud.geometry.getAttribute('position');
-				
-				positions.array[i    ] += positionDelta.x;
-				positions.array[i + 1] += positionDelta.y;
-				positions.array[i + 2] += positionDelta.z;
-
-				positions.needsUpdate = true;
-
+				positions.setX(i, bodyState.position.x);
+				positions.setY(i, bodyState.position.y);
+				positions.setZ(i, bodyState.position.z);
 
 				if (bodyState.drawTrails) {
 					var vertices = bodyState.trail.geometry.vertices;
@@ -537,8 +429,7 @@ APP.simulation = (function simulation(THREE) {
 				bodyState.thisFrameAcceleration = new THREE.Vector3();
 			}
 			
-			
-			state.bodyArray = newBodyArray;
+			positions.needsUpdate = true;
 		};
 
 		var cloneVector = function cloneVector(v) {
