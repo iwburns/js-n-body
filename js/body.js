@@ -80,15 +80,6 @@ APP.body = (function body(THREE) {
 		state.trail = new THREE.Line(trailGeometry, trailMaterial);
 		state.trail.frustumCulled = false;
 
-		var geometry = new THREE.SphereGeometry(args.radius, defaults.widthSegements, defaults.heightSegments);
-		var material = defaults.material;
-
-		if (args.color !== undefined) {
-			material.color = args.color;
-		}
-		
-		state.mesh = new THREE.Mesh(geometry, material);
-
 		var getState = function getState() {
 			return state;
 		};

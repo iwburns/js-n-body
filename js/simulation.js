@@ -33,7 +33,7 @@ APP.simulation = (function simulation(THREE) {
 
 			startingSpeed: 1,
 
-			detectCollisions: true,
+			detectCollisions: false,
 
 			seed: Date.now(),
 			
@@ -166,11 +166,19 @@ APP.simulation = (function simulation(THREE) {
 		//this will be used for color calculations, there is probably a better way.
 		state.roughTotalMass = ( state.particleCount * (state.minParticleMass + state.maxParticleMass) / 2);
 
+		//forcing this to be false for now.
+		state.detectCollisions = false;
+
 		// ideally this will be used to set input values to their validated values
 		args.afterValidation(state);
 
 		var init = function init() {
+
+			var positions = new Float32Array(state.particleCount * 3);
+			var colors = new Float32Array(state.particleCount * 3);
+
 			var i;
+			var j;
 			var maxAbsRange = state.gridSize;
 			
 			var getRandom = new Math.seedrandom(state.seed);
@@ -192,6 +200,7 @@ APP.simulation = (function simulation(THREE) {
 			var mass;
 			var velocity;
 			
+			var color;
 			var body;
 
 			state.bodyArray = new Array(state.particleCount);
@@ -207,6 +216,16 @@ APP.simulation = (function simulation(THREE) {
 				radius = (randomSizeMass * radiusRange) + state.minParticleSize;
 				mass   = (randomSizeMass * massRange) + state.minParticleMass;
 
+				color = calculateColor(mass);
+
+				positions[j    ] = randX;
+				positions[j + 1] = randY;
+				positions[j + 2] = randZ;
+				colors[j    ] = 0;
+				colors[j + 1] = 0;
+				colors[j + 2] = 0;
+				j += 3;
+
 				randVX = (getRandom() * 2) - 1;
 				randVY = (getRandom() * 2) - 1;
 				randVZ = (getRandom() * 2) - 1;
@@ -219,36 +238,35 @@ APP.simulation = (function simulation(THREE) {
 					// position is in meters
 					position: new THREE.Vector3(randX, randY, randZ),
 					// radius is in meters
-					radius: radius,
+					radius: 0.0001,
 					// mass is in kg
 					mass: mass,
 					// velocity is in meters / second
 					velocity: velocity,
-					color: calculateColor(mass),
+					color: color,
 					isLocked: false,
 					drawTrails: state.drawTrails,
 					trailLength: state.trailLength
 				});
 				
-				addToScene(body);
-				
 				state.bodyArray[i] = body;
 			}
 
-		};
-		
-		var addToScene = function addToScene(body) {
-			var bodyState = body.getState();
-				
-			state.scene.add(bodyState.mesh);
+			var pointSize = 1;
 
-			if (bodyState.drawTrails) {
-				state.scene.add(bodyState.trail);
-			}
-			
-			bodyState.mesh.translateX(bodyState.position.x);
-			bodyState.mesh.translateY(bodyState.position.y);
-			bodyState.mesh.translateZ(bodyState.position.z);
+			var geometry = new THREE.BufferGeometry();
+			var material = new THREE.PointsMaterial({
+				size: pointSize,
+				vertexColors: THREE.VertexColors
+			});
+
+			geometry.addAttribute('position', new THREE.BufferAttribute(positions, 3));
+			geometry.addAttribute('color', new THREE.BufferAttribute(colors, 3));
+			geometry.dynamic = true;
+
+			state.pointCloud = new THREE.Points(geometry, material);
+
+			state.scene.add(state.pointCloud);
 		};
 
 		var pause = function pause() {
@@ -436,6 +454,8 @@ APP.simulation = (function simulation(THREE) {
 			var arrayLen = bodyArray.length;
 			var body;
 			var bodyState;
+
+			var positions;
 			
 			//we can't use a fixed array here because we don't know how many bodies will be removed.
 			var newBodyArray = [];
@@ -447,41 +467,41 @@ APP.simulation = (function simulation(THREE) {
 				body = bodyArray[i];
 				bodyState = body.getState();
 				
-				if (bodyState.mass === 0) {
-					state.scene.remove(bodyState.mesh);
+				// if (bodyState.mass === 0) {
+				// 	state.scene.remove(bodyState.mesh);
 					
-					if (bodyState.drawTrails) {
-						state.scene.remove(bodyState.trail);
-					}
-					continue;
-				}
+				// 	if (bodyState.drawTrails) {
+				// 		state.scene.remove(bodyState.trail);
+				// 	}
+				// 	continue;
+				// }
 				
 				newBodyArray.push(body);
 				
-				if (bodyState.isLocked) {
-					continue;
-				}
+				// if (bodyState.isLocked) {
+				// 	continue;
+				// }
 				
-				if (bodyState.radiusChanged) {
-					bodyState.radiusChanged = false;
+				// if (bodyState.radiusChanged) {
+				// 	bodyState.radiusChanged = false;
 					
-					state.scene.remove(bodyState.mesh);
+				// 	state.scene.remove(bodyState.mesh);
 					
-					var bodyDefaults = body.getDefaults();
+				// 	var bodyDefaults = body.getDefaults();
 					
-					var geometry = new THREE.SphereGeometry(bodyState.radius, bodyDefaults.widthSegements, bodyDefaults.heightSegments);
-					var material = body.getDefaults().material;
+				// 	var geometry = new THREE.SphereGeometry(bodyState.radius, bodyDefaults.widthSegements, bodyDefaults.heightSegments);
+				// 	var material = body.getDefaults().material;
 			
-					material.color = calculateColor(bodyState.mass);
+				// 	material.color = calculateColor(bodyState.mass);
 					
-					bodyState.mesh = new THREE.Mesh(geometry, material);
+				// 	bodyState.mesh = new THREE.Mesh(geometry, material);
 					
-					state.scene.add(bodyState.mesh);
+				// 	state.scene.add(bodyState.mesh);
 					
-					bodyState.mesh.translateX(bodyState.position.x);
-					bodyState.mesh.translateY(bodyState.position.y);
-					bodyState.mesh.translateZ(bodyState.position.z);
-				}
+				// 	bodyState.mesh.translateX(bodyState.position.x);
+				// 	bodyState.mesh.translateY(bodyState.position.y);
+				// 	bodyState.mesh.translateZ(bodyState.position.z);
+				// }
 				
 				var accelerationVector = bodyState.thisFrameAcceleration;
 			
@@ -494,10 +514,19 @@ APP.simulation = (function simulation(THREE) {
 				bodyState.position.add(positionDelta);
 				bodyState.velocity.add(velocityDelta);
 				
-				bodyState.mesh.translateX(positionDelta.x);
-				bodyState.mesh.translateY(positionDelta.y);
-				bodyState.mesh.translateZ(positionDelta.z);
+				// bodyState.mesh.translateX(positionDelta.x);
+				// bodyState.mesh.translateY(positionDelta.y);
+				// bodyState.mesh.translateZ(positionDelta.z);
+
+				positions = state.pointCloud.geometry.getAttribute('position');
 				
+				positions.array[i    ] += positionDelta.x;
+				positions.array[i + 1] += positionDelta.y;
+				positions.array[i + 2] += positionDelta.z;
+
+				positions.needsUpdate = true;
+
+
 				if (bodyState.drawTrails) {
 					var vertices = bodyState.trail.geometry.vertices;
 					vertices.pop();
