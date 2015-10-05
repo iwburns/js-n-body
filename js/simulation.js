@@ -17,23 +17,27 @@ APP.simulation = (function simulation(THREE) {
 			timeMultiplier: 1000000,
 			gravityMultiplier: 1,
 
-			gridSize: 150,
+			gridSize: 100,
 			gridSpacing: 5,	//5 grid lines per grid
 
-			particleCount: 100,
+			particleCount: 600,
 
-			minParticleSize: 0.1,
-			maxParticleSize: 1,
+			minParticleSize: 0.5,
+			maxParticleSize: 0.5,
 
-			minParticleMass: 0.5,
-			maxParticleMass: 5,
+			minParticleMass: 1,
+			maxParticleMass: 1,
 			
 			drawTrails: false,
 			trailLength: 100,
 
-			startingSpeed: 1,
+			startingSpeed: 0,
 
-			detectCollisions: true,
+			detectCollisions: false,
+
+			softenGravity: true,
+			softeningDistance: 3,
+			softeningFactor: 5,
 
 			seed: Date.now(),
 			
@@ -71,6 +75,9 @@ APP.simulation = (function simulation(THREE) {
 			//drawTrails is checked below
 			trailLength: args.trailLength || defaults.trailLength,
 
+			softeningFactor: args.softeningFactor || defaults.softeningFactor,
+			softeningDistance: args.softeningDistance || defaults.softeningDistance,
+
 			//startingSpeed is checked below
 
 			seed: args.seed || defaults.seed,
@@ -83,6 +90,11 @@ APP.simulation = (function simulation(THREE) {
 			state.drawTrails = defaults.drawTrails;
 		} else {
 			state.drawTrails = args.drawTrails;
+		}
+		if (args.softenGravity === undefined) {
+			state.softenGravity = defaults.softenGravity;
+		} else {
+			state.softenGravity = args.softenGravity;
 		}
 		//startingSpeed isn't a boolean but 0 == false so we have to do a special check.
 		if (args.startingSpeed === undefined) {
@@ -319,6 +331,8 @@ APP.simulation = (function simulation(THREE) {
 			var accelerationDirection;
 			var adjustedGravity = state.gravity * state.gravityMultiplier;
 			var adjustedGravityPerDistanceSquared;
+			var softeningFactorSq = state.softeningFactor * state.softeningFactor;
+			var softeningDistanceSq = state.softeningDistance * state.softeningDistance;
 			var accelerationScalar;
 			var accelerationVector;
 
@@ -405,6 +419,10 @@ APP.simulation = (function simulation(THREE) {
 					}
 
 					adjustedGravityPerDistanceSquared = adjustedGravity / distanceSq;
+					
+					if (state.softenGravity && distanceSq < softeningDistanceSq) {
+						adjustedGravityPerDistanceSquared = adjustedGravity / (distanceSq + softeningFactorSq * (1 - distanceSq / softeningDistanceSq));
+					}
 
 					accelerationDirection = positionDiff.normalize(); // for "this" object
 
