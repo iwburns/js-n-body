@@ -174,6 +174,15 @@ APP.simulation = (function simulation(THREE) {
 		if (state.minParticleMass > state.maxParticleMass) {
 			state.maxParticleMass = state.minParticleMass;
 		}
+
+		state.useComputeRenderer = false;
+
+		if (state.useComputeRenderer) {
+			state.computeRenderer = new THREE.WebGLRenderer();
+			state.computeRenderer.setSize(window.innerWidth, window.innerHeight);
+			state.computeRenderer.setPixelRatio(window.devicePixelRatio);
+			state.computeRenderer.setClearColor(0xFFFFFF, 1);
+		}
 		
 		//this will be used for color calculations, there is probably a better way.
 		state.roughTotalMass = ( state.particleCount * (state.minParticleMass + state.maxParticleMass) / 2);
@@ -247,8 +256,18 @@ APP.simulation = (function simulation(THREE) {
 				state.bodyArray[i] = body;
 			}
 
+			if (state.useComputeRenderer) {
+				initShaders();
+			}
+
 		};
 		
+		var initShaders = function initShaders() {
+			return;
+
+			//init shaders for computeRenderer...
+		};
+
 		var addToScene = function addToScene(body) {
 			var bodyState = body.getState();
 				
@@ -291,7 +310,12 @@ APP.simulation = (function simulation(THREE) {
 				
 				startingLength = state.bodyArray.length;
 				
-				updateSingleThreaded();
+				if (state.useComputeRenderer) {
+					updateWithComputeRenderer();
+				} else {
+					updateSingleThreaded();
+				}
+
 				updatePositions(simulationDelta);
 				
 				endingLength = state.bodyArray.length;
@@ -307,6 +331,23 @@ APP.simulation = (function simulation(THREE) {
 
 		};
 		
+		var updateWithComputeRenderer = function updateWithComputeRenderer() {
+			return;
+
+			// we need to have a pointCloud Object3D with
+			// the correct position and mass attributes
+			var object = {};
+
+			// we need a new shader program for the rendering
+			var program = {};
+
+			// we don't care what it looks like because we will never see this,
+			// but it's required for the render.
+			var shadingMaterial = new THREE.Material();
+
+			state.computeRenderer.renderBufferImmediate(object, program, shadingMaterial);
+		};
+
 		var updateSingleThreaded = function updateSingleThreaded() {
 			var i;
 			var j;
