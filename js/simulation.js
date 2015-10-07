@@ -20,7 +20,7 @@ APP.simulation = (function simulation(THREE) {
 			gridSize: 100,
 			gridSpacing: 5,	//5 grid lines per grid
 
-			particleCount: 600,
+			particleCount: 100,
 
 			minParticleSize: 0.5,
 			maxParticleSize: 0.5,
@@ -176,13 +176,6 @@ APP.simulation = (function simulation(THREE) {
 		}
 
 		state.useComputeRenderer = false;
-
-		if (state.useComputeRenderer) {
-			state.computeRenderer = new THREE.WebGLRenderer();
-			state.computeRenderer.setSize(window.innerWidth, window.innerHeight);
-			state.computeRenderer.setPixelRatio(window.devicePixelRatio);
-			state.computeRenderer.setClearColor(0xFFFFFF, 1);
-		}
 		
 		//this will be used for color calculations, there is probably a better way.
 		state.roughTotalMass = ( state.particleCount * (state.minParticleMass + state.maxParticleMass) / 2);
@@ -257,15 +250,78 @@ APP.simulation = (function simulation(THREE) {
 			}
 
 			if (state.useComputeRenderer) {
-				initShaders();
+				initComputeRenderer();
 			}
 
 		};
 		
-		var initShaders = function initShaders() {
-			return;
+		var initComputeRenderer = function initComputeRenderer() {
 
-			//init shaders for computeRenderer...
+			state.computeRenderer = new THREE.WebGLRenderer();
+			state.computeRenderer.setSize(window.innerWidth, window.innerHeight);
+			state.computeRenderer.setPixelRatio(window.devicePixelRatio);
+			state.computeRenderer.setClearColor(0xFFFFFF, 1);
+
+			state.computeScene = new THREE.Scene();
+			state.computeCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1e6);
+
+			createPointCloud();
+
+			initShaders();
+		};
+
+		var initShaders = function initShaders() {
+
+			var gl = state.computeRenderer.context;
+
+			var glVertexShader = new THREE.WebGLShader(gl, gl.VERTEX_SHADER, [
+				'',
+				'',
+				'void main()',
+				'{',
+				'	gl_Position = vec4(1.0, 1.0, 1.0, 1.0);',
+				'',
+				'}'
+			].join('\n'));
+
+			state.shaderProgram = gl.createProgram();
+
+			gl.attachShader(state.shaderProgram, glVertexShader);
+
+			gl.linkProgram(state.shaderProgram);
+		};
+
+		var createPointCloud = function createPointCloud() {
+
+			var positions = new Float32Array(state.particleCount * 3);
+			var colors = new Float32Array(state.particleCount * 3);
+			
+			var x;
+			var y;
+			var z;
+
+			for (var i = 0; i < positions.length; i += 3) {
+					
+				x = y = z = i;
+
+				positions[i    ] = x;
+				positions[i + 1] = y;
+				positions[i + 2] = z;
+
+				colors[i    ] = x;
+				colors[i + 1] = y;
+				colors[i + 2] = z;
+			}
+
+			var geometry = new THREE.BufferGeometry();
+			var material = new THREE.PointsMaterial({ size: 1, vertexColors: THREE.VertexColors });
+
+			geometry.addAttribute('position', new THREE.BufferAttribute(positions, 3));
+			geometry.addAttribute('color', new THREE.BufferAttribute(colors, 3));
+			geometry.dynamic = true;
+
+			state.pointCloud = new THREE.Points(geometry, material);
+			state.computeScene.add(state.pointCloud);
 		};
 
 		var addToScene = function addToScene(body) {
@@ -332,20 +388,13 @@ APP.simulation = (function simulation(THREE) {
 		};
 		
 		var updateWithComputeRenderer = function updateWithComputeRenderer() {
-			return;
-
-			// we need to have a pointCloud Object3D with
-			// the correct position and mass attributes
-			var object = {};
-
-			// we need a new shader program for the rendering
-			var program = {};
 
 			// we don't care what it looks like because we will never see this,
 			// but it's required for the render.
 			var shadingMaterial = new THREE.Material();
 
-			state.computeRenderer.renderBufferImmediate(object, program, shadingMaterial);
+			//state.computeRenderer.renderBufferImmediate(state.pointCloud, state.shaderProgram, shadingMaterial);
+			state.computeRenderer.render(state.computeScene, state.computeCamera);
 		};
 
 		var updateSingleThreaded = function updateSingleThreaded() {
@@ -490,12 +539,41 @@ APP.simulation = (function simulation(THREE) {
 		};
 
 		var updatePositions = function updatePositions(delta) {
-			var i;
+
 			var bodyArray = state.bodyArray;
-			var arrayLen = bodyArray.length;
 			var body;
 			var bodyState;
-			
+			var arrayLen = bodyArray.length;
+
+			if (state.useComputeRenderer) {
+
+				var x, y, z;
+				var pointCloud = state.pointCloud;
+
+				var positions = pointCloud.geometry.getAttribute('position');
+
+				for (var i = 0; i < arrayLen; i++) {
+
+					body = bodyArray[i];
+					bodyState = body.getState();
+
+					x = positions[i * 3    ];
+					y = positions[i * 3 + 1];
+					z = positions[i * 3 + 2];
+
+					bodyState.position.x = x;
+					bodyState.position.y = y;
+					bodyState.position.z = z;
+				
+					bodyState.mesh.position.x = x;
+					bodyState.mesh.position.y = y;
+					bodyState.mesh.position.z = z;
+				}
+
+				return;
+			}
+
+			var i;
 			//we can't use a fixed array here because we don't know how many bodies will be removed.
 			var newBodyArray = [];
 			
