@@ -241,7 +241,8 @@ APP.simulation = (function simulation(THREE) {
 				'',
 				'void main()',
 				'{',
-				'	gl_Position = vec4(1.0, 1.0, 0.0, 1.0);',
+				'   gl_PointSize = 10.0;',
+				'	gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);',
 				'',
 				'}'
 			].join('\n');
@@ -253,7 +254,7 @@ APP.simulation = (function simulation(THREE) {
 				'',
 				'void main()',
 				'{',
-				'	gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);',
+				'	gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);',
 				'',
 				'}'
 			].join('\n');
