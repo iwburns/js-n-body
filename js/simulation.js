@@ -175,7 +175,7 @@ APP.simulation = (function simulation(THREE) {
 			state.maxParticleMass = state.minParticleMass;
 		}
 
-		state.useComputeRenderer = false;
+		state.useComputeRenderer = true;
 		
 		//this will be used for color calculations, there is probably a better way.
 		state.roughTotalMass = ( state.particleCount * (state.minParticleMass + state.maxParticleMass) / 2);
@@ -184,158 +184,81 @@ APP.simulation = (function simulation(THREE) {
 		args.afterValidation(state);
 
 		var init = function init() {
-			var i;
-			var maxAbsRange = state.gridSize;
-			
-			var getRandom = new Math.seedrandom(state.seed);
-			
-			var randX;
-			var randY;
-			var randZ;
-
-			var randVX;
-			var randVY;
-			var randVZ;
-
-			var randomSizeMass;
-
-			var radiusRange = state.maxParticleSize - state.minParticleSize;
-			var massRange = state.maxParticleMass - state.minParticleMass;
-
-			var radius;
-			var mass;
-			var velocity;
-			
-			var body;
-
-			state.bodyArray = new Array(state.particleCount);
-			
-			for (i = 0; i < state.particleCount; ++i) {
-
-				randX = (getRandom() * maxAbsRange * 2) - maxAbsRange;
-				randY = (getRandom() * maxAbsRange * 2) - maxAbsRange;
-				randZ = (getRandom() * maxAbsRange * 2) - maxAbsRange;
-
-				randomSizeMass = getRandom();
-
-				radius = (randomSizeMass * radiusRange) + state.minParticleSize;
-				mass   = (randomSizeMass * massRange) + state.minParticleMass;
-
-				randVX = (getRandom() * 2) - 1;
-				randVY = (getRandom() * 2) - 1;
-				randVZ = (getRandom() * 2) - 1;
-
-				velocity = new THREE.Vector3(randVX, randVY, randVZ);
-				velocity.normalize();
-				velocity.multiplyScalar(state.startingSpeed / state.timeMultiplier);
-
-				body = APP.body.make({
-					// position is in meters
-					position: new THREE.Vector3(randX, randY, randZ),
-					// radius is in meters
-					radius: radius,
-					// mass is in kg
-					mass: mass,
-					// velocity is in meters / second
-					velocity: velocity,
-					color: calculateColor(mass),
-					isLocked: false,
-					drawTrails: state.drawTrails,
-					trailLength: state.trailLength
-				});
-				
-				addToScene(body);
-				
-				state.bodyArray[i] = body;
-			}
-
-			if (state.useComputeRenderer) {
-				initComputeRenderer();
-			}
-
-		};
-		
-		var initComputeRenderer = function initComputeRenderer() {
-
-			state.computeRenderer = new THREE.WebGLRenderer();
-			state.computeRenderer.setSize(window.innerWidth, window.innerHeight);
-			state.computeRenderer.setPixelRatio(window.devicePixelRatio);
-			state.computeRenderer.setClearColor(0xFFFFFF, 1);
-
-			state.computeScene = new THREE.Scene();
-			state.computeCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1e6);
-
-			createPointCloud();
-
-			initShaders();
-		};
-
-		var initShaders = function initShaders() {
-
-			var gl = state.computeRenderer.context;
-
-			var glVertexShader = new THREE.WebGLShader(gl, gl.VERTEX_SHADER, [
-				'',
-				'',
-				'void main()',
-				'{',
-				'	gl_Position = vec4(1.0, 1.0, 1.0, 1.0);',
-				'',
-				'}'
-			].join('\n'));
-
-			state.shaderProgram = gl.createProgram();
-
-			gl.attachShader(state.shaderProgram, glVertexShader);
-
-			gl.linkProgram(state.shaderProgram);
-		};
-
-		var createPointCloud = function createPointCloud() {
 
 			var positions = new Float32Array(state.particleCount * 3);
 			var colors = new Float32Array(state.particleCount * 3);
-			
+
 			var x;
 			var y;
 			var z;
 
+			var getRandom = new Math.seedrandom(state.seed);
+			var maxAbsRange = state.gridSize;
+			//var radiusRange = state.maxParticleSize - state.minParticleSize;
+			var massRange = state.maxParticleMass - state.minParticleMass;
+			var randomSizeMass;
+			var mass;
+			var color;
+			
 			for (var i = 0; i < positions.length; i += 3) {
 					
-				x = y = z = i;
+				x = (getRandom() * maxAbsRange * 2) - maxAbsRange;
+				y = (getRandom() * maxAbsRange * 2) - maxAbsRange;
+				z = (getRandom() * maxAbsRange * 2) - maxAbsRange;
 
-				positions[i    ] = x;
-				positions[i + 1] = y;
-				positions[i + 2] = z;
+				randomSizeMass = getRandom();
+				mass   = (randomSizeMass * massRange) + state.minParticleMass;
+				color = calculateColor(mass);
 
-				colors[i    ] = x;
-				colors[i + 1] = y;
-				colors[i + 2] = z;
+				positions[i    ] = i;
+				positions[i + 1] = i;
+				positions[i + 2] = i;
+
+				colors[i    ] = color.r;
+				colors[i + 1] = color.g;
+				colors[i + 2] = color.b;
 			}
 
 			var geometry = new THREE.BufferGeometry();
-			var material = new THREE.PointsMaterial({ size: 1, vertexColors: THREE.VertexColors });
-
+			var material = new THREE.ShaderMaterial(getShaderConfig());
+			
 			geometry.addAttribute('position', new THREE.BufferAttribute(positions, 3));
 			geometry.addAttribute('color', new THREE.BufferAttribute(colors, 3));
 			geometry.dynamic = true;
 
 			state.pointCloud = new THREE.Points(geometry, material);
-			state.computeScene.add(state.pointCloud);
+			state.scene.add(state.pointCloud);
+
+			console.log(state.pointCloud);
 		};
 
-		var addToScene = function addToScene(body) {
-			var bodyState = body.getState();
-				
-			state.scene.add(bodyState.mesh);
+		var getShaderConfig = function getShaderConfig() {
 
-			if (bodyState.drawTrails) {
-				state.scene.add(bodyState.trail);
-			}
-			
-			bodyState.mesh.translateX(bodyState.position.x);
-			bodyState.mesh.translateY(bodyState.position.y);
-			bodyState.mesh.translateZ(bodyState.position.z);
+			var config = {};
+
+			config.vertexShader = [
+				'',
+				'',
+				'void main()',
+				'{',
+				'	gl_Position = vec4(1.0, 1.0, 0.0, 1.0);',
+				'',
+				'}'
+			].join('\n');
+
+			config.vertexColors = THREE.VertexColors;
+
+			config.fragmentShader = [
+				'',
+				'',
+				'void main()',
+				'{',
+				'	gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0);',
+				'',
+				'}'
+			].join('\n');
+
+			return config;
 		};
 
 		var pause = function pause() {
@@ -362,180 +285,31 @@ APP.simulation = (function simulation(THREE) {
 
 			if (!state.paused) {
 				
-				simulationDelta = timeDelta * state.timeMultiplier;
+				// simulationDelta = timeDelta * state.timeMultiplier;
 				
-				startingLength = state.bodyArray.length;
+				//startingLength = state.bodyArray.length;
 				
-				if (state.useComputeRenderer) {
-					updateWithComputeRenderer();
-				} else {
-					updateSingleThreaded();
-				}
 
-				updatePositions(simulationDelta);
+				updateWithComputeRenderer();
+
+
+				//updatePositions(simulationDelta);
 				
-				endingLength = state.bodyArray.length;
+				//endingLength = state.bodyArray.length;
 				
-				var data = {
-					simulationDelta: simulationDelta,
-					particleCountChanged: startingLength !== endingLength,
-					currentNumParticles: endingLength
-				};
+				// var data = {
+				// 	simulationDelta: simulationDelta,
+				// 	particleCountChanged: startingLength !== endingLength,
+				// 	currentNumParticles: endingLength
+				// };
 				
-				afterUpdate(data);
+				// afterUpdate(data);
 			}
 
 		};
 		
 		var updateWithComputeRenderer = function updateWithComputeRenderer() {
-
-			// we don't care what it looks like because we will never see this,
-			// but it's required for the render.
-			var shadingMaterial = new THREE.Material();
-
-			//state.computeRenderer.renderBufferImmediate(state.pointCloud, state.shaderProgram, shadingMaterial);
-			state.computeRenderer.render(state.computeScene, state.computeCamera);
-		};
-
-		var updateSingleThreaded = function updateSingleThreaded() {
-			var i;
-			var j;
-			var bodyArray = state.bodyArray;
-			var arrayLen = bodyArray.length;
-
-			var thisBody;
-			var thisPosition;
-			var thisVelocity;
-			var thisMass;
-			var thisRadius;
-			var thisMomentum;
-
-			var otherBody;
-			var otherPosition;
-			var otherVelocity;
-			var otherMass;
-			var otherRadius;
-			var otherMomentum;
-
-			var positionDiff;
-			var accelerationDirection;
-			var adjustedGravity = state.gravity * state.gravityMultiplier;
-			var adjustedGravityPerDistanceSquared;
-			var softeningFactorSq = state.softeningFactor * state.softeningFactor;
-			var softeningDistanceSq = state.softeningDistance * state.softeningDistance;
-			var accelerationScalar;
-			var accelerationVector;
-
-			var distanceSq;
-			var collisionDistanceSq;
-			var totalMomentum;
-
-			var finalMass;
-			var finalVelocity;
-			var finalRadius;
-			
-			var dontCalculate;
-
-			outerLoop:
-			for (i = 0; i < arrayLen; ++i) {
-
-				thisBody = bodyArray[i].getState();
-
-				if (thisBody.mass === 0) {
-					continue outerLoop;
-				}
-
-				thisPosition = thisBody.position;
-				thisMass = thisBody.mass;
-
-				innerLoop:
-				for (j = i + 1; j < arrayLen; ++j) {
-
-					otherBody = bodyArray[j].getState();
-
-					if (otherBody.mass === 0) {
-						continue innerLoop;
-					}
-
-					otherPosition = otherBody.position;
-					otherMass = otherBody.mass;
-
-					positionDiff = cloneVector(otherPosition).sub(thisPosition);
-					distanceSq = positionDiff.lengthSq();
-
-					if (state.detectCollisions) {
-
-						thisRadius = thisBody.radius;
-						otherRadius = otherBody.radius;
-						collisionDistanceSq = (thisRadius + otherRadius) * (thisRadius + otherRadius);
-
-						if (distanceSq <= collisionDistanceSq) {
-
-							thisVelocity = thisBody.velocity;
-							otherVelocity = otherBody.velocity;
-
-							//we don't want to modify the velocity vectors here so we must clone
-							thisMomentum = cloneVector(thisVelocity).multiplyScalar(thisMass);
-							otherMomentum = cloneVector(otherVelocity).multiplyScalar(otherMass);
-							totalMomentum = thisMomentum.add(otherMomentum);
-
-							finalMass = thisMass + otherMass;
-							finalVelocity = totalMomentum.divideScalar(finalMass);
-							finalRadius = Math.pow((thisRadius * thisRadius * thisRadius + otherRadius * otherRadius * otherRadius), 1/3);
-
-							if (thisRadius >= otherRadius) {
-								thisBody.velocity = cloneVector(finalVelocity); // this may not be necessary
-								thisBody.mass = finalMass;
-								bodyArray[i].setRadius(finalRadius); // we use this so that we don't have to set "radiusChanged" manually.
-								otherBody.mass = 0;
-
-								// we should keep calculating for "this" object (bodyArray[i])
-								// but we need to skip accel. calculations
-								// between the current "this" object and the current "other" object (bodyArray[j])
-								// because they will result in a 0 add to accel for "this" object.
-								continue innerLoop;
-							} else {
-								otherBody.velocity = cloneVector(finalVelocity); // this may not be necessary
-								otherBody.mass = finalMass;
-								bodyArray[j].setRadius(finalRadius); // we use this so that we don't have to set "radiusChanged" manually.
-								thisBody.mass = 0;
-
-								// we should stop calculating for "this" object (bodyArray[i])
-								// because this object will soon be removed
-								// and all subsequent calculations on it will result in a 0 add to accel.
-								continue outerLoop;
-							}
-						}
-					}
-
-					adjustedGravityPerDistanceSquared = adjustedGravity / distanceSq;
-					
-					if (state.softenGravity && distanceSq < softeningDistanceSq) {
-						adjustedGravityPerDistanceSquared = adjustedGravity / (distanceSq + softeningFactorSq * (1 - distanceSq / softeningDistanceSq));
-					}
-
-					accelerationDirection = positionDiff.normalize(); // for "this" object
-
-					dontCalculate = thisBody.isLocked || (thisBody.respectOnlyLocked && !otherBody.isLocked);
-
-					if (!dontCalculate) {
-						//calculate accel Vector for 'this' object.
-						accelerationScalar = adjustedGravityPerDistanceSquared * otherMass;
-						accelerationVector = cloneVector(accelerationDirection).multiplyScalar(accelerationScalar);
-						thisBody.thisFrameAcceleration.add(accelerationVector);
-					}
-
-					dontCalculate = otherBody.isLocked || (otherBody.respectOnlyLocked && !thisBody.isLocked);
-
-					if (!dontCalculate) {
-						accelerationDirection.negate();	// for "other" object
-						//calculate accel Vector for 'other' object.
-						accelerationScalar = adjustedGravityPerDistanceSquared * thisMass;
-						accelerationVector = accelerationDirection.multiplyScalar(accelerationScalar);
-						otherBody.thisFrameAcceleration.add(accelerationVector);
-					}
-				}
-			}
+			state.pointCloud.geometry.getAttribute('position').needsUpdate = true;
 		};
 
 		var updatePositions = function updatePositions(delta) {
@@ -551,23 +325,21 @@ APP.simulation = (function simulation(THREE) {
 				var pointCloud = state.pointCloud;
 
 				var positions = pointCloud.geometry.getAttribute('position');
+				var position;
 
 				for (var i = 0; i < arrayLen; i++) {
 
 					body = bodyArray[i];
 					bodyState = body.getState();
 
-					x = positions[i * 3    ];
-					y = positions[i * 3 + 1];
-					z = positions[i * 3 + 2];
+					x = positions.array[i * positions.itemSize    ];
+					y = positions.array[i * positions.itemSize + 1];
+					z = positions.array[i * positions.itemSize + 2];
 
-					bodyState.position.x = x;
-					bodyState.position.y = y;
-					bodyState.position.z = z;
-				
-					bodyState.mesh.position.x = x;
-					bodyState.mesh.position.y = y;
-					bodyState.mesh.position.z = z;
+					position = new THREE.Vector3(x, y, z);
+
+					bodyState.position = position;
+					bodyState.mesh.position.set(position.x, position.y, position.z);
 				}
 
 				return;

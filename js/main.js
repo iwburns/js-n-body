@@ -150,9 +150,17 @@ APP.main = (function main(THREE, Stats, $){
 			config = config || {};
 			
 			currentSimulationTimeMillis = 0;
-			
+
 			scene = new THREE.Scene();
+
+			cameraRig = new THREE.Object3D();
+			scene.add(cameraRig);
+			
+			camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, nearPlane, farPlane);
+			cameraRig.add(camera);
+			
 			config.scene = scene;
+			config.camera = camera;
 			
 			config.afterValidation = function afterValidation(state) {
 				$("#numParticles").val(state.particleCount);
@@ -172,13 +180,7 @@ APP.main = (function main(THREE, Stats, $){
 			simulation.init();
 			
 			var simState = simulation.getState();
-			
-			cameraRig = new THREE.Object3D();
-			scene.add(cameraRig);
-			
-			camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, nearPlane, farPlane);
-			cameraRig.add(camera);
-			
+
 			cameraOffset = new THREE.Vector3();
 			
 			cameraRig.position.set(0, simState.gridSize, simState.gridSize);
