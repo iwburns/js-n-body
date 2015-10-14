@@ -20,7 +20,7 @@ APP.simulation = (function simulation(THREE) {
 			gridSize: 100,
 			gridSpacing: 5,	//5 grid lines per grid
 
-			particleCount: 600,
+			particleCount: 400,
 
 			minParticleSize: 0.5,
 			maxParticleSize: 0.5,
@@ -36,8 +36,7 @@ APP.simulation = (function simulation(THREE) {
 			detectCollisions: false,
 
 			softenGravity: true,
-			softeningDistance: 3,
-			softeningFactor: 5,
+			softeningDistance: 5,
 
 			seed: Date.now(),
 			
@@ -75,7 +74,6 @@ APP.simulation = (function simulation(THREE) {
 			//drawTrails is checked below
 			trailLength: args.trailLength || defaults.trailLength,
 
-			softeningFactor: args.softeningFactor || defaults.softeningFactor,
 			softeningDistance: args.softeningDistance || defaults.softeningDistance,
 
 			//startingSpeed is checked below
@@ -331,7 +329,6 @@ APP.simulation = (function simulation(THREE) {
 			var accelerationDirection;
 			var adjustedGravity = state.gravity * state.gravityMultiplier;
 			var adjustedGravityPerDistanceSquared;
-			var softeningFactorSq = state.softeningFactor * state.softeningFactor;
 			var softeningDistanceSq = state.softeningDistance * state.softeningDistance;
 			var accelerationScalar;
 			var accelerationVector;
@@ -418,11 +415,10 @@ APP.simulation = (function simulation(THREE) {
 						}
 					}
 
-					adjustedGravityPerDistanceSquared = adjustedGravity / distanceSq;
-					
 					if (state.softenGravity && distanceSq < softeningDistanceSq) {
-						adjustedGravityPerDistanceSquared = adjustedGravity / (distanceSq + softeningFactorSq * (1 - distanceSq / softeningDistanceSq));
+						distanceSq = softeningDistanceSq;
 					}
+					adjustedGravityPerDistanceSquared = adjustedGravity / distanceSq;
 
 					accelerationDirection = positionDiff.normalize(); // for "this" object
 
