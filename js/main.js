@@ -107,7 +107,7 @@ APP.main = (function main(THREE, Stats, $){
 					inputParams.stop().animate({height: "20px"}, 750);
 				} else {
 					inputParams.addClass("open");
-					inputParams.stop().animate({height: "420px"}, 750);
+					inputParams.stop().animate({height: "410px"}, 750);
 				}
 			});
 	
