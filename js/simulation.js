@@ -18,12 +18,12 @@ APP.simulation = (function simulation(THREE) {
 			gravityMultiplier: 1,
 
 			gridSize: 100,
-			gridSpacing: 5,	//5 grid lines per grid
+			gridSpacing: 5,
 
-			particleCount: 400,
+			particleCount: 50,
 
-			minParticleSize: 0.5,
-			maxParticleSize: 0.5,
+			minParticleSize: 1,
+			maxParticleSize: 1,
 
 			minParticleMass: 1,
 			maxParticleMass: 1,
@@ -31,7 +31,7 @@ APP.simulation = (function simulation(THREE) {
 			drawTrails: false,
 			trailLength: 100,
 
-			startingSpeed: 0,
+			startingSpeed: 2,
 
 			detectCollisions: false,
 

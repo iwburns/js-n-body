@@ -107,7 +107,7 @@ APP.main = (function main(THREE, Stats, $){
 					inputParams.stop().animate({height: "20px"}, 750);
 				} else {
 					inputParams.addClass("open");
-					inputParams.stop().animate({height: "400px"}, 750);
+					inputParams.stop().animate({height: "420px"}, 750);
 				}
 			});
 	
@@ -134,6 +134,7 @@ APP.main = (function main(THREE, Stats, $){
 				config.startingSpeed = parseFloat($("#startingSpeed").val());
 				config.gridSize = parseInt($("#gridSize").val());
 				config.drawTrails = ($("input:radio[name=drawTrails]:checked").val() === "true");
+				config.detectCollisions = ($("input:radio[name=detectCollisions]:checked").val() === "true");
 				config.seed = parseInt($("#seed").val());
 				config.timeMultiplier = parseInt($("#timeMultiplier").val());
 				
