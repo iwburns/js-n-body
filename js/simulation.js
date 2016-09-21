@@ -18,12 +18,12 @@ APP.simulation = (function simulation(THREE) {
 			gravityMultiplier: 1,
 
 			gridSize: 100,
-			gridSpacing: 5,	//5 grid lines per grid
+			gridSpacing: 5,
 
 			particleCount: 100,
 
-			minParticleSize: 0.5,
-			maxParticleSize: 0.5,
+			minParticleSize: 1,
+			maxParticleSize: 1,
 
 			minParticleMass: 1,
 			maxParticleMass: 1,
@@ -31,13 +31,12 @@ APP.simulation = (function simulation(THREE) {
 			drawTrails: false,
 			trailLength: 100,
 
-			startingSpeed: 0,
+			startingSpeed: 2,
 
 			detectCollisions: false,
 
 			softenGravity: true,
-			softeningDistance: 3,
-			softeningFactor: 5,
+			softeningDistance: 5,
 
 			seed: Date.now(),
 			
@@ -75,7 +74,6 @@ APP.simulation = (function simulation(THREE) {
 			//drawTrails is checked below
 			trailLength: args.trailLength || defaults.trailLength,
 
-			softeningFactor: args.softeningFactor || defaults.softeningFactor,
 			softeningDistance: args.softeningDistance || defaults.softeningDistance,
 
 			//startingSpeed is checked below
