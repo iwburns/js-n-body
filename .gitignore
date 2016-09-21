@@ -50,11 +50,14 @@ fabric.properties
 ### Intellij Patch ###
 # Comment Reason: https://github.com/joeblau/gitignore.io/issues/186#issuecomment-215987721
 
-# *.iml
+# Uncommenting these for now, if for some reason they become important to share later, we can do so.
+*.iml
 # modules.xml
 # .idea/misc.xml
 # *.ipr
 
+# Adding this for now, really don't think the .ida folder will mater with this project.
+.idea
 
 ### Linux ###
 *~
