@@ -183,6 +183,10 @@ APP.simulation = (function simulation(THREE) {
 
 		var init = function init() {
 
+			state.positions = new Float32Array(state.particleCount * 3);
+			state.velocities = new Float32Array(state.particleCount * 3);
+			state.masses = new Float32Array(state.particleCount);
+
 			var positions = new Float32Array(state.particleCount * 3);
 			var colors = new Float32Array(state.particleCount * 3);
 
@@ -208,10 +212,19 @@ APP.simulation = (function simulation(THREE) {
 				mass   = (randomSizeMass * massRange) + state.minParticleMass;
 				color = calculateColor(mass);
 
+				//for computation
+				state.positions[i    ] = x;
+				state.positions[i + 1] = y;
+				state.positions[i + 2] = z;
+				state.velocities[i    ] = 0;
+				state.velocities[i + 1] = 0;
+				state.velocities[i + 2] = 0;
+				state.masses = mass;
+
+				//for geometry
 				positions[i    ] = x;
 				positions[i + 1] = y;
 				positions[i + 2] = z;
-
 				colors[i    ] = color.r;
 				colors[i + 1] = color.g;
 				colors[i + 2] = color.b;
@@ -226,8 +239,6 @@ APP.simulation = (function simulation(THREE) {
 
 			state.pointCloud = new THREE.Points(geometry, material);
 			state.scene.add(state.pointCloud);
-
-			console.log(state.pointCloud);
 		};
 
 		var getShaderConfig = function getShaderConfig() {
