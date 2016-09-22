@@ -20,7 +20,7 @@ APP.simulation = (function simulation(THREE) {
 			gridSize: 100,
 			gridSpacing: 5,
 
-			particleCount: 100,
+			particleCount: 800,
 
 			minParticleSize: 1,
 			maxParticleSize: 1,
@@ -31,12 +31,12 @@ APP.simulation = (function simulation(THREE) {
 			drawTrails: false,
 			trailLength: 100,
 
-			startingSpeed: 2,
+			startingSpeed: 0,
 
 			detectCollisions: false,
 
 			softenGravity: true,
-			softeningDistance: 5,
+			softeningDistance: 10,
 
 			seed: Date.now(),
 			
@@ -242,6 +242,7 @@ APP.simulation = (function simulation(THREE) {
 			geometry.dynamic = true;
 
 			state.pointCloud = new THREE.Points(geometry, material);
+			state.pointCloudPositions = state.pointCloud.geometry.getAttribute('position');
 			state.scene.add(state.pointCloud);
 		};
 
@@ -293,8 +294,6 @@ APP.simulation = (function simulation(THREE) {
 
 		var update = function update(timeDelta, afterUpdate) {
 			var simulationDelta;
-			var startingLength;
-			var endingLength;
 
 			if (!state.paused) {
 
@@ -324,21 +323,25 @@ APP.simulation = (function simulation(THREE) {
 			var otherVelocity;
 			var otherMass;
 
-			var positionDiff = getEmptyVector();
+			var positionDiff = {};
 			var distanceSq;
 			var softeningDistanceSq = state.softeningDistance * state.softeningDistance;
 
 			var adjustedGravity = state.gravity * state.gravityMultiplier;
 			var adjustedGravityPerDistanceSquared;
 
-			var accelerationDirection = getEmptyVector();
+			var accelerationDirection = {};
 			var accelerationScalar;
-			var accelerationVector = getEmptyVector();
+			var accelerationVector = {};
+
+			var thisAccelVector;
 
 			for (i = 0; i < particleCount; ++i) {
 				thisPosition = getBodyPosition(i);
 				thisVelocity = getBodyVelocity(i);
 				thisMass = getBodyMass(i);
+
+				thisAccelVector = getEmptyVector();
 
 				for (j = i + 1; j < particleCount; ++j) {
 					otherPosition = getBodyPosition(j);
@@ -348,16 +351,15 @@ APP.simulation = (function simulation(THREE) {
 					subVectors(otherPosition, thisPosition, positionDiff);
 					distanceSq = lengthSq(positionDiff);
 
-					if (state.softenGravity && distanceSq < softeningDistanceSq) {
-						distanceSq = softeningDistanceSq;
-					}
+					distanceSq = Math.max(distanceSq, softeningDistanceSq);
 					adjustedGravityPerDistanceSquared = adjustedGravity / distanceSq;
 
 					normalize(positionDiff, accelerationDirection); // for "this" object
 					//calculate accel Vector for 'this' object.
 					accelerationScalar = adjustedGravityPerDistanceSquared * otherMass;
 					multiplyScalar(accelerationDirection, accelerationScalar, accelerationVector);
-					addBodyAcceleration(i, accelerationVector);
+					addVectors(thisAccelVector, accelerationVector, thisAccelVector);
+					// addBodyAcceleration(i, accelerationVector);
 
 					negate(accelerationDirection, accelerationDirection); // for "other" object
 					//calculate accel Vector for 'other' object.
@@ -365,152 +367,9 @@ APP.simulation = (function simulation(THREE) {
 					multiplyScalar(accelerationDirection, accelerationScalar, accelerationVector);
 					addBodyAcceleration(j, accelerationVector);
 				}
+
+				addBodyAcceleration(i, thisAccelVector);
 			}
-		};
-
-		var _oldUpdateSingleThreaded = function _oldUpdateSingleThreaded() {
-			var i;
-			var j;
-			var bodyArray = state.bodyArray;
-			var arrayLen = bodyArray.length;
-
-			var thisBody;
-			var thisPosition;
-			var thisVelocity;
-			var thisMass;
-			var thisRadius;
-			var thisMomentum = new THREE.Vector3(0, 0, 0);
-
-			var otherBody;
-			var otherPosition;
-			var otherVelocity;
-			var otherMass;
-			var otherRadius;
-			var otherMomentum = new THREE.Vector3(0, 0, 0);
-
-			var positionDiff = new THREE.Vector3(0, 0, 0);
-			var accelerationDirection;
-			var adjustedGravity = state.gravity * state.gravityMultiplier;
-			var adjustedGravityPerDistanceSquared;
-			var softeningDistanceSq = state.softeningDistance * state.softeningDistance;
-			var accelerationScalar;
-			var accelerationVector = new THREE.Vector3(0, 0, 0);
-
-			var distanceSq;
-			var collisionDistanceSq;
-			var totalMomentum;
-
-			var finalMass;
-			var finalVelocity;
-			var finalRadius;
-
-			var dontCalculate;
-
-			outerLoop:
-				for (i = 0; i < arrayLen; ++i) {
-
-					thisBody = bodyArray[i].getState();
-
-					if (thisBody.mass === 0) {
-						continue outerLoop;
-					}
-
-					thisPosition = thisBody.position;
-					thisMass = thisBody.mass;
-
-					innerLoop:
-						for (j = i + 1; j < arrayLen; ++j) {
-
-							otherBody = bodyArray[j].getState();
-
-							if (otherBody.mass === 0) {
-								continue innerLoop;
-							}
-
-							otherPosition = otherBody.position;
-							otherMass = otherBody.mass;
-
-							// positionDiff = cloneVector(otherPosition).sub(thisPosition);
-							positionDiff.x = otherPosition.x - thisPosition.x;
-							positionDiff.y = otherPosition.y - thisPosition.y;
-							positionDiff.z = otherPosition.z - thisPosition.z;
-							distanceSq = positionDiff.lengthSq();
-
-							if (state.detectCollisions) {
-
-								thisRadius = thisBody.radius;
-								otherRadius = otherBody.radius;
-								collisionDistanceSq = (thisRadius + otherRadius) * (thisRadius + otherRadius);
-
-								if (distanceSq <= collisionDistanceSq) {
-
-									thisVelocity = thisBody.velocity;
-									otherVelocity = otherBody.velocity;
-
-									//we don't want to modify the velocity vectors here so we must clone
-									thisMomentum = cloneVector(thisVelocity).multiplyScalar(thisMass);
-									otherMomentum = cloneVector(otherVelocity).multiplyScalar(otherMass);
-									totalMomentum = thisMomentum.add(otherMomentum);
-
-									finalMass = thisMass + otherMass;
-									finalVelocity = totalMomentum.divideScalar(finalMass);
-									finalRadius = Math.pow((thisRadius * thisRadius * thisRadius + otherRadius * otherRadius * otherRadius), 1/3);
-
-									if (thisRadius >= otherRadius) {
-										thisBody.velocity = cloneVector(finalVelocity); // this may not be necessary
-										thisBody.mass = finalMass;
-										bodyArray[i].setRadius(finalRadius); // we use this so that we don't have to set "radiusChanged" manually.
-										otherBody.mass = 0;
-
-										// we should keep calculating for "this" object (bodyArray[i])
-										// but we need to skip accel. calculations
-										// between the current "this" object and the current "other" object (bodyArray[j])
-										// because they will result in a 0 add to accel for "this" object.
-										continue innerLoop;
-									} else {
-										otherBody.velocity = cloneVector(finalVelocity); // this may not be necessary
-										otherBody.mass = finalMass;
-										bodyArray[j].setRadius(finalRadius); // we use this so that we don't have to set "radiusChanged" manually.
-										thisBody.mass = 0;
-
-										// we should stop calculating for "this" object (bodyArray[i])
-										// because this object will soon be removed
-										// and all subsequent calculations on it will result in a 0 add to accel.
-										continue outerLoop;
-									}
-								}
-							}
-
-							if (state.softenGravity && distanceSq < softeningDistanceSq) {
-								distanceSq = softeningDistanceSq;
-							}
-							adjustedGravityPerDistanceSquared = adjustedGravity / distanceSq;
-
-							accelerationDirection = positionDiff.normalize(); // for "this" object
-
-							dontCalculate = thisBody.isLocked || (thisBody.respectOnlyLocked && !otherBody.isLocked);
-
-							if (!dontCalculate) {
-								//calculate accel Vector for 'this' object.
-								accelerationScalar = adjustedGravityPerDistanceSquared * otherMass;
-								//accelerationVector = cloneVector(accelerationDirection).multiplyScalar(accelerationScalar);
-								accelerationVector.x = accelerationDirection.x * accelerationScalar;
-								accelerationVector.y = accelerationDirection.y * accelerationScalar;
-								accelerationVector.z = accelerationDirection.z * accelerationScalar;
-								thisBody.thisFrameAcceleration.add(accelerationVector);
-							}
-
-							dontCalculate = otherBody.isLocked || (otherBody.respectOnlyLocked && !thisBody.isLocked);
-
-							if (!dontCalculate) {
-								accelerationDirection.negate();	// for "other" object
-								//calculate accel Vector for 'other' object.
-								accelerationScalar = adjustedGravityPerDistanceSquared * thisMass;
-								accelerationVector = accelerationDirection.multiplyScalar(accelerationScalar);
-								otherBody.thisFrameAcceleration.add(accelerationVector);
-							}
-						}
-				}
 		};
 
 		var updatePositions = function updatePositions(delta) {
@@ -520,18 +379,15 @@ APP.simulation = (function simulation(THREE) {
 			var position;
 			var velocity;
 
-			var accelerationVector = getEmptyVector();
-			var velocityTime = getEmptyVector();
-			var accelTimeSqOver2 = getEmptyVector();
+			var accelerationVector = {};
+			var velocityTime = {};
+			var accelTimeSqOver2 = {};
 
-			var positionDelta = getEmptyVector();
-			var velocityDelta = getEmptyVector();
+			var positionDelta = {};
+			var velocityDelta = {};
 
 			delta /= 1000;
 			var deltaSqOver2 = (delta * delta) / 2;
-
-			var pointCloudPositions = state.pointCloud.geometry.getAttribute('position');
-			var newPos;
 
 			for (i = 0; i < particleCount; ++i) {
 				position = getBodyPosition(i);
@@ -549,126 +405,12 @@ APP.simulation = (function simulation(THREE) {
 				addBodyPosition(i, positionDelta);
 				addBodyVelocity(i, velocityDelta);
 
-				newPos = getBodyPosition(i);
-				pointCloudPositions.setXYZ(i, newPos.x, newPos.y, newPos.z);
-
-				setBodyAcceleration(i, getEmptyVector());
+				clearBodyAcceleration(i);
 			}
 
-			//translate positions in point cloud.
-			// state.pointCloud.geometry.getAttribute('position').set(state.positions);
-		};
-
-		var _oldUpdatePositions = function _oldUpdatePositions(delta) {
-
-			var body;
-			var bodyState;
-			var arrayLen = bodyArray.length;
-
-			if (state.useComputeRenderer) {
-
-				var x, y, z;
-				var pointCloud = state.pointCloud;
-
-				var positions = pointCloud.geometry.getAttribute('position');
-				var position;
-
-				for (var i = 0; i < arrayLen; i++) {
-
-					body = bodyArray[i];
-					bodyState = body.getState();
-
-					x = positions.array[i * positions.itemSize    ];
-					y = positions.array[i * positions.itemSize + 1];
-					z = positions.array[i * positions.itemSize + 2];
-
-					position = new THREE.Vector3(x, y, z);
-
-					bodyState.position = position;
-					bodyState.mesh.position.set(position.x, position.y, position.z);
-				}
-
-				return;
-			}
-
-			var i;
-			//we can't use a fixed array here because we don't know how many bodies will be removed.
-			var newBodyArray = [];
-
-			//miliseconds to seconds
-			delta /= 1000;
-
-			for (i = 0; i < arrayLen; ++i) {
-				body = bodyArray[i];
-				bodyState = body.getState();
-
-				if (bodyState.mass === 0) {
-					state.scene.remove(bodyState.mesh);
-
-					if (bodyState.drawTrails) {
-						state.scene.remove(bodyState.trail);
-					}
-					continue;
-				}
-
-				newBodyArray.push(body);
-
-				if (bodyState.isLocked) {
-					continue;
-				}
-
-				if (bodyState.radiusChanged) {
-					bodyState.radiusChanged = false;
-
-					state.scene.remove(bodyState.mesh);
-
-					var bodyDefaults = body.getDefaults();
-
-					var geometry = new THREE.SphereGeometry(bodyState.radius, bodyDefaults.widthSegements, bodyDefaults.heightSegments);
-					var material = body.getDefaults().material;
-
-					material.color = calculateColor(bodyState.mass);
-
-					bodyState.mesh = new THREE.Mesh(geometry, material);
-
-					state.scene.add(bodyState.mesh);
-
-					bodyState.mesh.translateX(bodyState.position.x);
-					bodyState.mesh.translateY(bodyState.position.y);
-					bodyState.mesh.translateZ(bodyState.position.z);
-				}
-
-				var accelerationVector = bodyState.thisFrameAcceleration;
-
-				// d = v1*t + (1/2)*a*(t^2)
-				var velocityTime = cloneVector(bodyState.velocity).multiplyScalar(delta);
-				var positionDelta = velocityTime.add(cloneVector(accelerationVector).multiplyScalar(0.5 * delta * delta));
-
-				var velocityDelta = accelerationVector.multiplyScalar(delta);
-
-				bodyState.position.add(positionDelta);
-				bodyState.velocity.add(velocityDelta);
-
-				bodyState.mesh.translateX(positionDelta.x);
-				bodyState.mesh.translateY(positionDelta.y);
-				bodyState.mesh.translateZ(positionDelta.z);
-
-				if (bodyState.drawTrails) {
-					var vertices = bodyState.trail.geometry.vertices;
-					vertices.pop();
-					vertices.unshift(cloneVector(bodyState.position));
-					bodyState.trail.geometry.verticesNeedUpdate = true;
-				}
-
-				bodyState.thisFrameAcceleration = new THREE.Vector3();
-			}
-
-
-			state.bodyArray = newBodyArray;
-		};
-
-		var cloneVector = function cloneVector(v) {
-			return new THREE.Vector3(v.x, v.y, v.z);
+			//update positions in point cloud.
+			state.pointCloudPositions.set(state.positions);
+			state.pointCloudPositions.needsUpdate = true;
 		};
 
 		var getEmptyVector = function getEmptyVector() {
@@ -739,6 +481,13 @@ APP.simulation = (function simulation(THREE) {
 			accelerations[bodyIndex * 3    ] += accel.x;
 			accelerations[bodyIndex * 3 + 1] += accel.y;
 			accelerations[bodyIndex * 3 + 2] += accel.z;
+		};
+
+		var clearBodyAcceleration = function clearBodyAcceleration(bodyIndex) {
+			var accelerations = state.accelerations;
+			accelerations[bodyIndex * 3    ] = 0;
+			accelerations[bodyIndex * 3 + 1] = 0;
+			accelerations[bodyIndex * 3 + 2] = 0;
 		};
 
 		var getBodyMass = function getBodyMass(bodyIndex) {
