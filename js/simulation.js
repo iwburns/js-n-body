@@ -288,31 +288,29 @@ APP.simulation = (function simulation(THREE) {
 		};
 
 		var update = function update(timeDelta, afterUpdate) {
-			
 			var simulationDelta;
 			var startingLength;
 			var endingLength;
 
 			if (!state.paused) {
-				
-				// simulationDelta = timeDelta * state.timeMultiplier;
-				
-				//startingLength = state.bodyArray.length;
+
+				simulationDelta = timeDelta * state.timeMultiplier;
+
+				// startingLength = state.bodyArray.length;
 
 				updateSingleThreaded();
-				//updatePositions(simulationDelta);
-				
-				//endingLength = state.bodyArray.length;
-				
+				updatePositions(simulationDelta);
+
+				// endingLength = state.bodyArray.length;
+
 				// var data = {
 				// 	simulationDelta: simulationDelta,
 				// 	particleCountChanged: startingLength !== endingLength,
 				// 	currentNumParticles: endingLength
 				// };
-				
-				// afterUpdate(data);
+                //
+                // afterUpdate(data);
 			}
-
 		};
 
 		var updateSingleThreaded = function updateSingleThreaded() {
@@ -321,111 +319,110 @@ APP.simulation = (function simulation(THREE) {
 
 		var updatePositions = function updatePositions(delta) {
 
-			var bodyArray = state.bodyArray;
-			var body;
-			var bodyState;
-			var arrayLen = bodyArray.length;
+			// var body;
+			// var bodyState;
+			// var arrayLen = bodyArray.length;
+            //
+			// if (state.useComputeRenderer) {
+            //
+			// 	var x, y, z;
+			// 	var pointCloud = state.pointCloud;
+            //
+			// 	var positions = pointCloud.geometry.getAttribute('position');
+			// 	var position;
+            //
+			// 	for (var i = 0; i < arrayLen; i++) {
+            //
+			// 		body = bodyArray[i];
+			// 		bodyState = body.getState();
+            //
+			// 		x = positions.array[i * positions.itemSize    ];
+			// 		y = positions.array[i * positions.itemSize + 1];
+			// 		z = positions.array[i * positions.itemSize + 2];
+            //
+			// 		position = new THREE.Vector3(x, y, z);
+            //
+			// 		bodyState.position = position;
+			// 		bodyState.mesh.position.set(position.x, position.y, position.z);
+			// 	}
+            //
+			// 	return;
+			// }
 
-			if (state.useComputeRenderer) {
-
-				var x, y, z;
-				var pointCloud = state.pointCloud;
-
-				var positions = pointCloud.geometry.getAttribute('position');
-				var position;
-
-				for (var i = 0; i < arrayLen; i++) {
-
-					body = bodyArray[i];
-					bodyState = body.getState();
-
-					x = positions.array[i * positions.itemSize    ];
-					y = positions.array[i * positions.itemSize + 1];
-					z = positions.array[i * positions.itemSize + 2];
-
-					position = new THREE.Vector3(x, y, z);
-
-					bodyState.position = position;
-					bodyState.mesh.position.set(position.x, position.y, position.z);
-				}
-
-				return;
-			}
-
-			var i;
-			//we can't use a fixed array here because we don't know how many bodies will be removed.
-			var newBodyArray = [];
-			
-			//miliseconds to seconds
-			delta /= 1000;
-
-			for (i = 0; i < arrayLen; ++i) {
-				body = bodyArray[i];
-				bodyState = body.getState();
-				
-				if (bodyState.mass === 0) {
-					state.scene.remove(bodyState.mesh);
-					
-					if (bodyState.drawTrails) {
-						state.scene.remove(bodyState.trail);
-					}
-					continue;
-				}
-				
-				newBodyArray.push(body);
-				
-				if (bodyState.isLocked) {
-					continue;
-				}
-				
-				if (bodyState.radiusChanged) {
-					bodyState.radiusChanged = false;
-					
-					state.scene.remove(bodyState.mesh);
-					
-					var bodyDefaults = body.getDefaults();
-					
-					var geometry = new THREE.SphereGeometry(bodyState.radius, bodyDefaults.widthSegements, bodyDefaults.heightSegments);
-					var material = body.getDefaults().material;
-			
-					material.color = calculateColor(bodyState.mass);
-					
-					bodyState.mesh = new THREE.Mesh(geometry, material);
-					
-					state.scene.add(bodyState.mesh);
-					
-					bodyState.mesh.translateX(bodyState.position.x);
-					bodyState.mesh.translateY(bodyState.position.y);
-					bodyState.mesh.translateZ(bodyState.position.z);
-				}
-				
-				var accelerationVector = bodyState.thisFrameAcceleration;
-			
-				// d = v1*t + (1/2)*a*(t^2)
-				var velocityTime = cloneVector(bodyState.velocity).multiplyScalar(delta);
-				var positionDelta = velocityTime.add(cloneVector(accelerationVector).multiplyScalar(0.5 * delta * delta));
-	
-				var velocityDelta = accelerationVector.multiplyScalar(delta);
-				
-				bodyState.position.add(positionDelta);
-				bodyState.velocity.add(velocityDelta);
-				
-				bodyState.mesh.translateX(positionDelta.x);
-				bodyState.mesh.translateY(positionDelta.y);
-				bodyState.mesh.translateZ(positionDelta.z);
-				
-				if (bodyState.drawTrails) {
-					var vertices = bodyState.trail.geometry.vertices;
-					vertices.pop();
-					vertices.unshift(cloneVector(bodyState.position));
-					bodyState.trail.geometry.verticesNeedUpdate = true;
-				}
-				
-				bodyState.thisFrameAcceleration = new THREE.Vector3();
-			}
-			
-			
-			state.bodyArray = newBodyArray;
+			// var i;
+			// //we can't use a fixed array here because we don't know how many bodies will be removed.
+			// var newBodyArray = [];
+			//
+			// //miliseconds to seconds
+			// delta /= 1000;
+            //
+			// for (i = 0; i < arrayLen; ++i) {
+			// 	body = bodyArray[i];
+			// 	bodyState = body.getState();
+			//
+			// 	if (bodyState.mass === 0) {
+			// 		state.scene.remove(bodyState.mesh);
+			//
+			// 		if (bodyState.drawTrails) {
+			// 			state.scene.remove(bodyState.trail);
+			// 		}
+			// 		continue;
+			// 	}
+			//
+			// 	newBodyArray.push(body);
+			//
+			// 	if (bodyState.isLocked) {
+			// 		continue;
+			// 	}
+			//
+			// 	if (bodyState.radiusChanged) {
+			// 		bodyState.radiusChanged = false;
+			//
+			// 		state.scene.remove(bodyState.mesh);
+			//
+			// 		var bodyDefaults = body.getDefaults();
+			//
+			// 		var geometry = new THREE.SphereGeometry(bodyState.radius, bodyDefaults.widthSegements, bodyDefaults.heightSegments);
+			// 		var material = body.getDefaults().material;
+			//
+			// 		material.color = calculateColor(bodyState.mass);
+			//
+			// 		bodyState.mesh = new THREE.Mesh(geometry, material);
+			//
+			// 		state.scene.add(bodyState.mesh);
+			//
+			// 		bodyState.mesh.translateX(bodyState.position.x);
+			// 		bodyState.mesh.translateY(bodyState.position.y);
+			// 		bodyState.mesh.translateZ(bodyState.position.z);
+			// 	}
+			//
+			// 	var accelerationVector = bodyState.thisFrameAcceleration;
+			//
+			// 	// d = v1*t + (1/2)*a*(t^2)
+			// 	var velocityTime = cloneVector(bodyState.velocity).multiplyScalar(delta);
+			// 	var positionDelta = velocityTime.add(cloneVector(accelerationVector).multiplyScalar(0.5 * delta * delta));
+            //
+			// 	var velocityDelta = accelerationVector.multiplyScalar(delta);
+			//
+			// 	bodyState.position.add(positionDelta);
+			// 	bodyState.velocity.add(velocityDelta);
+			//
+			// 	bodyState.mesh.translateX(positionDelta.x);
+			// 	bodyState.mesh.translateY(positionDelta.y);
+			// 	bodyState.mesh.translateZ(positionDelta.z);
+			//
+			// 	if (bodyState.drawTrails) {
+			// 		var vertices = bodyState.trail.geometry.vertices;
+			// 		vertices.pop();
+			// 		vertices.unshift(cloneVector(bodyState.position));
+			// 		bodyState.trail.geometry.verticesNeedUpdate = true;
+			// 	}
+			//
+			// 	bodyState.thisFrameAcceleration = new THREE.Vector3();
+			// }
+			//
+			//
+			// state.bodyArray = newBodyArray;
 		};
 
 		var cloneVector = function cloneVector(v) {
