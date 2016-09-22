@@ -317,6 +317,151 @@ APP.simulation = (function simulation(THREE) {
 
 		};
 
+		var _oldUpdateSingleThreaded = function updateSingleThreaded() {
+			var i;
+			var j;
+			var bodyArray = state.bodyArray;
+			var arrayLen = bodyArray.length;
+
+			var thisBody;
+			var thisPosition;
+			var thisVelocity;
+			var thisMass;
+			var thisRadius;
+			var thisMomentum = new THREE.Vector3(0, 0, 0);
+
+			var otherBody;
+			var otherPosition;
+			var otherVelocity;
+			var otherMass;
+			var otherRadius;
+			var otherMomentum = new THREE.Vector3(0, 0, 0);
+
+			var positionDiff = new THREE.Vector3(0, 0, 0);
+			var accelerationDirection;
+			var adjustedGravity = state.gravity * state.gravityMultiplier;
+			var adjustedGravityPerDistanceSquared;
+			var softeningDistanceSq = state.softeningDistance * state.softeningDistance;
+			var accelerationScalar;
+			var accelerationVector = new THREE.Vector3(0, 0, 0);
+
+			var distanceSq;
+			var collisionDistanceSq;
+			var totalMomentum;
+
+			var finalMass;
+			var finalVelocity;
+			var finalRadius;
+
+			var dontCalculate;
+
+			outerLoop:
+				for (i = 0; i < arrayLen; ++i) {
+
+					thisBody = bodyArray[i].getState();
+
+					if (thisBody.mass === 0) {
+						continue outerLoop;
+					}
+
+					thisPosition = thisBody.position;
+					thisMass = thisBody.mass;
+
+					innerLoop:
+						for (j = i + 1; j < arrayLen; ++j) {
+
+							otherBody = bodyArray[j].getState();
+
+							if (otherBody.mass === 0) {
+								continue innerLoop;
+							}
+
+							otherPosition = otherBody.position;
+							otherMass = otherBody.mass;
+
+							// positionDiff = cloneVector(otherPosition).sub(thisPosition);
+							positionDiff.x = otherPosition.x - thisPosition.x;
+							positionDiff.y = otherPosition.y - thisPosition.y;
+							positionDiff.z = otherPosition.z - thisPosition.z;
+							distanceSq = positionDiff.lengthSq();
+
+							if (state.detectCollisions) {
+
+								thisRadius = thisBody.radius;
+								otherRadius = otherBody.radius;
+								collisionDistanceSq = (thisRadius + otherRadius) * (thisRadius + otherRadius);
+
+								if (distanceSq <= collisionDistanceSq) {
+
+									thisVelocity = thisBody.velocity;
+									otherVelocity = otherBody.velocity;
+
+									//we don't want to modify the velocity vectors here so we must clone
+									thisMomentum = cloneVector(thisVelocity).multiplyScalar(thisMass);
+									otherMomentum = cloneVector(otherVelocity).multiplyScalar(otherMass);
+									totalMomentum = thisMomentum.add(otherMomentum);
+
+									finalMass = thisMass + otherMass;
+									finalVelocity = totalMomentum.divideScalar(finalMass);
+									finalRadius = Math.pow((thisRadius * thisRadius * thisRadius + otherRadius * otherRadius * otherRadius), 1/3);
+
+									if (thisRadius >= otherRadius) {
+										thisBody.velocity = cloneVector(finalVelocity); // this may not be necessary
+										thisBody.mass = finalMass;
+										bodyArray[i].setRadius(finalRadius); // we use this so that we don't have to set "radiusChanged" manually.
+										otherBody.mass = 0;
+
+										// we should keep calculating for "this" object (bodyArray[i])
+										// but we need to skip accel. calculations
+										// between the current "this" object and the current "other" object (bodyArray[j])
+										// because they will result in a 0 add to accel for "this" object.
+										continue innerLoop;
+									} else {
+										otherBody.velocity = cloneVector(finalVelocity); // this may not be necessary
+										otherBody.mass = finalMass;
+										bodyArray[j].setRadius(finalRadius); // we use this so that we don't have to set "radiusChanged" manually.
+										thisBody.mass = 0;
+
+										// we should stop calculating for "this" object (bodyArray[i])
+										// because this object will soon be removed
+										// and all subsequent calculations on it will result in a 0 add to accel.
+										continue outerLoop;
+									}
+								}
+							}
+
+							if (state.softenGravity && distanceSq < softeningDistanceSq) {
+								distanceSq = softeningDistanceSq;
+							}
+							adjustedGravityPerDistanceSquared = adjustedGravity / distanceSq;
+
+							accelerationDirection = positionDiff.normalize(); // for "this" object
+
+							dontCalculate = thisBody.isLocked || (thisBody.respectOnlyLocked && !otherBody.isLocked);
+
+							if (!dontCalculate) {
+								//calculate accel Vector for 'this' object.
+								accelerationScalar = adjustedGravityPerDistanceSquared * otherMass;
+								//accelerationVector = cloneVector(accelerationDirection).multiplyScalar(accelerationScalar);
+								accelerationVector.x = accelerationDirection.x * accelerationScalar;
+								accelerationVector.y = accelerationDirection.y * accelerationScalar;
+								accelerationVector.z = accelerationDirection.z * accelerationScalar;
+								thisBody.thisFrameAcceleration.add(accelerationVector);
+							}
+
+							dontCalculate = otherBody.isLocked || (otherBody.respectOnlyLocked && !thisBody.isLocked);
+
+							if (!dontCalculate) {
+								accelerationDirection.negate();	// for "other" object
+								//calculate accel Vector for 'other' object.
+								accelerationScalar = adjustedGravityPerDistanceSquared * thisMass;
+								accelerationVector = accelerationDirection.multiplyScalar(accelerationScalar);
+								otherBody.thisFrameAcceleration.add(accelerationVector);
+							}
+						}
+				}
+		};
+
 		var updatePositions = function updatePositions(delta) {
 
 			// var body;
