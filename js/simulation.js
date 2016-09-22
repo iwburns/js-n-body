@@ -185,6 +185,7 @@ APP.simulation = (function simulation(THREE) {
 
 			state.positions = new Float32Array(state.particleCount * 3);
 			state.velocities = new Float32Array(state.particleCount * 3);
+			state.accelerations = new Float32Array(state.particleCount * 3);
 			state.masses = new Float32Array(state.particleCount);
 
 			var positions = new Float32Array(state.particleCount * 3);
@@ -219,6 +220,9 @@ APP.simulation = (function simulation(THREE) {
 				state.velocities[i    ] = 0;
 				state.velocities[i + 1] = 0;
 				state.velocities[i + 2] = 0;
+				state.accelerations[i    ] = 0;
+				state.accelerations[i + 1] = 0;
+				state.accelerations[i + 2] = 0;
 				state.masses = mass;
 
 				//for geometry
@@ -314,7 +318,58 @@ APP.simulation = (function simulation(THREE) {
 		};
 
 		var updateSingleThreaded = function updateSingleThreaded() {
+			var i, j;
+			var particleCount = state.particleCount;
+			var thisPosition;
+			var thisVelocity;
+			var thisMass;
 
+			var otherPosition;
+			var otherVelocity;
+			var otherMass;
+
+			var positionDiff = {x: 0, y: 0, z: 0};
+			var distanceSq;
+			var softeningDistanceSq = state.softeningDistance * state.softeningDistance;
+
+			var adjustedGravity = state.gravity * state.gravityMultiplier;
+			var adjustedGravityPerDistanceSquared;
+
+			var accelerationDirection = {x: 0, y: 0, z: 0};
+			var accelerationScalar;
+			var accelerationVector = {x: 0, y: 0, z: 0};
+
+			for (i = 0; i < particleCount; ++i) {
+				thisPosition = getBodyPosition(i);
+				thisVelocity = getBodyVelocity(i);
+				thisMass = getBodyMass(i);
+
+				for (j = i + 1; j < particleCount; ++j) {
+					otherPosition = getBodyPosition(j);
+					otherVelocity = getBodyVelocity(j);
+					otherMass = getBodyMass(j);
+
+					subVectors(otherPosition, thisPosition, positionDiff);
+					distanceSq = lengthSq(positionDiff);
+
+					if (state.softenGravity && distanceSq < softeningDistanceSq) {
+						distanceSq = softeningDistanceSq;
+					}
+					adjustedGravityPerDistanceSquared = adjustedGravity / distanceSq;
+
+					normalize(positionDiff, accelerationDirection); // for "this" object
+					//calculate accel Vector for 'this' object.
+					accelerationScalar = adjustedGravityPerDistanceSquared * otherMass;
+					multiplyScalar(accelerationDirection, accelerationScalar, accelerationVector);
+					addBodyAcceleration(i, accelerationVector);
+
+					negate(accelerationDirection, accelerationDirection); // for "other" object
+					//calculate accel Vector for 'other' object.
+					accelerationScalar = adjustedGravityPerDistanceSquared * thisMass;
+					multiplyScalar(accelerationDirection, accelerationScalar, accelerationVector);
+					addBodyAcceleration(j, accelerationVector);
+				}
+			}
 		};
 
 		var _oldUpdateSingleThreaded = function updateSingleThreaded() {
@@ -577,9 +632,9 @@ APP.simulation = (function simulation(THREE) {
 		var getBodyPosition = function getBodyPosition(bodyIndex) {
 			var positions = state.positions;
 
-			var x = positions[bodyIndex    ];
-			var y = positions[bodyIndex + 1];
-			var z = positions[bodyIndex + 2];
+			var x = positions[bodyIndex * 3    ];
+			var y = positions[bodyIndex * 3 + 1];
+			var z = positions[bodyIndex * 3 + 2];
 
 			return {x: x, y: y, z: z};
 		};
@@ -587,15 +642,68 @@ APP.simulation = (function simulation(THREE) {
 		var getBodyVelocity = function getBodyVelocity(bodyIndex) {
 			var velocities = state.velocities;
 
-			var x = velocities[bodyIndex    ];
-			var y = velocities[bodyIndex + 1];
-			var z = velocities[bodyIndex + 2];
+			var x = velocities[bodyIndex * 3    ];
+			var y = velocities[bodyIndex * 3 + 1];
+			var z = velocities[bodyIndex * 3 + 2];
 
 			return {x: x, y: y, z: z};
 		};
 
+		var getBodyAcceleration = function getBodyAcceleration(bodyIndex) {
+			var accelerations = state.accelerations;
+
+			var x = accelerations[bodyIndex * 3    ];
+			var y = accelerations[bodyIndex * 3 + 1];
+			var z = accelerations[bodyIndex * 3 + 2];
+
+			return {x: x, y: y, z: z};
+		};
+
+		var setBodyAcceleration = function setBodyAcceleration(bodyIndex, accel) {
+			var accelerations = state.accelerations;
+			accelerations[bodyIndex * 3    ] = accel.x;
+			accelerations[bodyIndex * 3 + 1] = accel.y;
+			accelerations[bodyIndex * 3 + 2] = accel.z;
+		};
+
+		var addBodyAcceleration = function addBodyAcceleration(bodyIndex, accel) {
+			var accelerations = state.accelerations;
+			accelerations[bodyIndex * 3    ] += accel.x;
+			accelerations[bodyIndex * 3 + 1] += accel.y;
+			accelerations[bodyIndex * 3 + 2] += accel.z;
+		};
+
 		var getBodyMass = function getBodyMass(bodyIndex) {
 			return state.masses[bodyIndex];
+		};
+
+		var subVectors = function subVectors(a, b, result) {
+			result.x = a.x - b.x;
+			result.y = a.y - b.y;
+			result.z = a.z - b.z;
+		};
+
+		var multiplyScalar = function multiplyScalar(vector, scalar, result) {
+			result.x = vector.x * scalar;
+			result.y = vector.y * scalar;
+			result.z = vector.z * scalar;
+		};
+
+		var normalize = function normalize(vector, result) {
+			var length = Math.sqrt(lengthSq(vector));
+			result.x = vector.x / length;
+			result.y = vector.y / length;
+			result.z = vector.z / length;
+		};
+
+		var negate = function negate(vector, result) {
+			result.x = -vector.x;
+			result.y = -vector.y;
+			result.z = -vector.z;
+		};
+
+		var lengthSq = function lengthSq(a) {
+			return (a.x * a.x) + (a.y * a.y) + (a.z * a.z);
 		};
 		
 		var calculateColor = function calculateColor(mass) {
