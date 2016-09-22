@@ -243,6 +243,7 @@ APP.simulation = (function simulation(THREE) {
 
 			state.pointCloud = new THREE.Points(geometry, material);
 			state.pointCloudPositions = state.pointCloud.geometry.getAttribute('position');
+			state.pointCloudColors = state.pointCloud.geometry.getAttribute('color');
 			state.scene.add(state.pointCloud);
 		};
 
@@ -252,11 +253,12 @@ APP.simulation = (function simulation(THREE) {
 
 			config.vertexShader = [
 				'',
-				'',
+				'varying vec3 pass_color;',
 				'void main()',
 				'{',
 				'   gl_PointSize = 2.0;',
 				'	gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);',
+				'	pass_color = color;',
 				'',
 				'}'
 			].join('\n');
@@ -265,10 +267,10 @@ APP.simulation = (function simulation(THREE) {
 
 			config.fragmentShader = [
 				'',
-				'',
+				'varying vec3 pass_color;',
 				'void main()',
 				'{',
-				'	gl_FragColor = vec4(1.0, 0.0, 0.0, 1.0);',
+				'	gl_FragColor = vec4(pass_color, 1.0);',
 				'',
 				'}'
 			].join('\n');
@@ -389,10 +391,22 @@ APP.simulation = (function simulation(THREE) {
 			delta /= 1000;
 			var deltaSqOver2 = (delta * delta) / 2;
 
+			var speed;
+			var speedFloor = 0;
+			var speedCeil = 0.00005;
+			var speedFactor;
+
+			var colorFloor = 0;
+			var colorCeil = 1;
+			var hue;
+
+			var color = new THREE.Color();
+
 			for (i = 0; i < particleCount; ++i) {
 				position = getBodyPosition(i);
 				velocity = getBodyVelocity(i);
 				accelerationVector = getBodyAcceleration(i);
+				speed = Math.sqrt(lengthSq(velocity));
 
 				// deltaD = v1*t + (1/2)*a*(t^2)
 				multiplyScalar(velocity, delta, velocityTime);
@@ -405,12 +419,21 @@ APP.simulation = (function simulation(THREE) {
 				addBodyPosition(i, positionDelta);
 				addBodyVelocity(i, velocityDelta);
 
+				speedFactor = (speed - speedFloor) / (speedCeil - speedFloor);
+				speedFactor = Math.max(0, speedFactor);
+				speedFactor = Math.min(1, speedFactor);
+
+				hue = (1 - speedFactor) * colorFloor + speedFactor * colorCeil;
+				color = color.setHSL(hue, 1, 0.25);
+				state.pointCloudColors.setXYZ(i, color.r, color.g, color.b);
+
 				clearBodyAcceleration(i);
 			}
 
 			//update positions in point cloud.
 			state.pointCloudPositions.set(state.positions);
 			state.pointCloudPositions.needsUpdate = true;
+			state.pointCloudColors.needsUpdate = true;
 		};
 
 		var getEmptyVector = function getEmptyVector() {
