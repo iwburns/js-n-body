@@ -20,7 +20,7 @@ APP.simulation = (function simulation(THREE) {
 			gridSize: 100,
 			gridSpacing: 5,
 
-			particleCount: 50,
+			particleCount: 800,
 
 			minParticleSize: 1,
 			maxParticleSize: 1,
@@ -31,7 +31,7 @@ APP.simulation = (function simulation(THREE) {
 			drawTrails: false,
 			trailLength: 100,
 
-			startingSpeed: 2,
+			startingSpeed: 0,
 
 			detectCollisions: false,
 
@@ -316,22 +316,22 @@ APP.simulation = (function simulation(THREE) {
 			var thisVelocity;
 			var thisMass;
 			var thisRadius;
-			var thisMomentum;
+			var thisMomentum = new THREE.Vector3(0, 0, 0);
 
 			var otherBody;
 			var otherPosition;
 			var otherVelocity;
 			var otherMass;
 			var otherRadius;
-			var otherMomentum;
+			var otherMomentum = new THREE.Vector3(0, 0, 0);
 
-			var positionDiff;
+			var positionDiff = new THREE.Vector3(0, 0, 0);
 			var accelerationDirection;
 			var adjustedGravity = state.gravity * state.gravityMultiplier;
 			var adjustedGravityPerDistanceSquared;
 			var softeningDistanceSq = state.softeningDistance * state.softeningDistance;
 			var accelerationScalar;
-			var accelerationVector;
+			var accelerationVector = new THREE.Vector3(0, 0, 0);
 
 			var distanceSq;
 			var collisionDistanceSq;
@@ -367,7 +367,10 @@ APP.simulation = (function simulation(THREE) {
 					otherPosition = otherBody.position;
 					otherMass = otherBody.mass;
 
-					positionDiff = cloneVector(otherPosition).sub(thisPosition);
+					// positionDiff = cloneVector(otherPosition).sub(thisPosition);
+					positionDiff.x = otherPosition.x - thisPosition.x;
+					positionDiff.y = otherPosition.y - thisPosition.y;
+					positionDiff.z = otherPosition.z - thisPosition.z;
 					distanceSq = positionDiff.lengthSq();
 
 					if (state.detectCollisions) {
@@ -427,7 +430,10 @@ APP.simulation = (function simulation(THREE) {
 					if (!dontCalculate) {
 						//calculate accel Vector for 'this' object.
 						accelerationScalar = adjustedGravityPerDistanceSquared * otherMass;
-						accelerationVector = cloneVector(accelerationDirection).multiplyScalar(accelerationScalar);
+						//accelerationVector = cloneVector(accelerationDirection).multiplyScalar(accelerationScalar);
+						accelerationVector.x = accelerationDirection.x * accelerationScalar;
+						accelerationVector.y = accelerationDirection.y * accelerationScalar;
+						accelerationVector.z = accelerationDirection.z * accelerationScalar;
 						thisBody.thisFrameAcceleration.add(accelerationVector);
 					}
 
@@ -450,6 +456,11 @@ APP.simulation = (function simulation(THREE) {
 			var arrayLen = bodyArray.length;
 			var body;
 			var bodyState;
+			var bodyVelocity;
+			var velocityTime = new THREE.Vector3(0, 0, 0);
+			var positionDelta = new THREE.Vector3(0, 0, 0);
+			var velocityDelta = new THREE.Vector3(0, 0, 0);
+			var bodyMesh;
 			
 			//we can't use a fixed array here because we don't know how many bodies will be removed.
 			var newBodyArray = [];
@@ -457,12 +468,16 @@ APP.simulation = (function simulation(THREE) {
 			//miliseconds to seconds
 			delta /= 1000;
 
+			var deltaSq = delta * delta;
+			var deltaSqOver2 = deltaSq / 2;
+
 			for (i = 0; i < arrayLen; ++i) {
 				body = bodyArray[i];
 				bodyState = body.getState();
+				bodyMesh = bodyState.mesh;
 				
 				if (bodyState.mass === 0) {
-					state.scene.remove(bodyState.mesh);
+					state.scene.remove(bodyMesh);
 					
 					if (bodyState.drawTrails) {
 						state.scene.remove(bodyState.trail);
@@ -479,7 +494,7 @@ APP.simulation = (function simulation(THREE) {
 				if (bodyState.radiusChanged) {
 					bodyState.radiusChanged = false;
 					
-					state.scene.remove(bodyState.mesh);
+					state.scene.remove(bodyMesh);
 					
 					var bodyDefaults = body.getDefaults();
 					
@@ -487,30 +502,40 @@ APP.simulation = (function simulation(THREE) {
 					var material = body.getDefaults().material;
 			
 					material.color = calculateColor(bodyState.mass);
+
+					bodyMesh = new THREE.Mesh(geometry, material);
 					
-					bodyState.mesh = new THREE.Mesh(geometry, material);
+					state.scene.add(bodyMesh);
 					
-					state.scene.add(bodyState.mesh);
-					
-					bodyState.mesh.translateX(bodyState.position.x);
-					bodyState.mesh.translateY(bodyState.position.y);
-					bodyState.mesh.translateZ(bodyState.position.z);
+					bodyMesh.translateX(bodyState.position.x);
+					bodyMesh.translateY(bodyState.position.y);
+					bodyMesh.translateZ(bodyState.position.z);
 				}
 				
 				var accelerationVector = bodyState.thisFrameAcceleration;
-			
+
 				// d = v1*t + (1/2)*a*(t^2)
-				var velocityTime = cloneVector(bodyState.velocity).multiplyScalar(delta);
-				var positionDelta = velocityTime.add(cloneVector(accelerationVector).multiplyScalar(0.5 * delta * delta));
-	
-				var velocityDelta = accelerationVector.multiplyScalar(delta);
-				
+				// var velocityTime = cloneVector(bodyState.velocity).multiplyScalar(delta);
+				bodyVelocity = bodyState.velocity;
+				velocityTime.x = bodyVelocity.x * delta;
+				velocityTime.y = bodyVelocity.y * delta;
+				velocityTime.z = bodyVelocity.z * delta;
+				// var positionDelta = velocityTime.add(cloneVector(accelerationVector).multiplyScalar(deltaSqOver2));
+				positionDelta.x = velocityTime.x + (accelerationVector.x * deltaSqOver2);
+				positionDelta.y = velocityTime.y + (accelerationVector.y * deltaSqOver2);
+				positionDelta.z = velocityTime.z + (accelerationVector.z * deltaSqOver2);
+
+				// var velocityDelta = accelerationVector.multiplyScalar(delta);
+				velocityDelta.x = accelerationVector.x * delta;
+				velocityDelta.y = accelerationVector.y * delta;
+				velocityDelta.z = accelerationVector.z * delta;
+
 				bodyState.position.add(positionDelta);
 				bodyState.velocity.add(velocityDelta);
 				
-				bodyState.mesh.translateX(positionDelta.x);
-				bodyState.mesh.translateY(positionDelta.y);
-				bodyState.mesh.translateZ(positionDelta.z);
+				bodyMesh.translateX(positionDelta.x);
+				bodyMesh.translateY(positionDelta.y);
+				bodyMesh.translateZ(positionDelta.z);
 				
 				if (bodyState.drawTrails) {
 					var vertices = bodyState.trail.geometry.vertices;
@@ -518,8 +543,9 @@ APP.simulation = (function simulation(THREE) {
 					vertices.unshift(cloneVector(bodyState.position));
 					bodyState.trail.geometry.verticesNeedUpdate = true;
 				}
-				
-				bodyState.thisFrameAcceleration = new THREE.Vector3();
+
+				// bodyState.thisFrameAcceleration = new THREE.Vector3();
+				accelerationVector.set(0, 0, 0);
 			}
 			
 			
