@@ -47,7 +47,7 @@ APP.main = (function main(THREE, Stats, $){
 			
 			renderer.setSize(window.innerWidth, window.innerHeight);
 			renderer.setPixelRatio(window.devicePixelRatio);
-			renderer.setClearColor(0xFFFFFF, 1);
+			renderer.setClearColor(0x000000, 1);
 			
 			document.body.appendChild(renderer.domElement);
 			
