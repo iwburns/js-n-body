@@ -183,6 +183,9 @@ APP.simulation = (function simulation(THREE) {
 
 		var init = function init() {
 
+			state.softeningDistanceSq = state.softeningDistance * state.softeningDistance;
+			state.adjustedGravity = state.gravity * state.gravityMultiplier;
+
 			state.positions = new Float32Array(state.particleCount * 3);
 			state.velocities = new Float32Array(state.particleCount * 3);
 			state.accelerations = new Float32Array(state.particleCount * 3);
@@ -327,9 +330,9 @@ APP.simulation = (function simulation(THREE) {
 
 			var positionDiff = {};
 			var distanceSq;
-			var softeningDistanceSq = state.softeningDistance * state.softeningDistance;
+			var softeningDistanceSq = state.softeningDistanceSq;
 
-			var adjustedGravity = state.gravity * state.gravityMultiplier;
+			var adjustedGravity = state.adjustedGravity;
 			var adjustedGravityPerDistanceSquared;
 
 			var accelerationDirection = {};
@@ -351,9 +354,9 @@ APP.simulation = (function simulation(THREE) {
 					otherMass = getBodyMass(j);
 
 					subVectors(otherPosition, thisPosition, positionDiff);
-					distanceSq = lengthSq(positionDiff);
 
-					distanceSq = Math.max(distanceSq, softeningDistanceSq);
+					distanceSq = Math.max(lengthSq(positionDiff), softeningDistanceSq);
+
 					adjustedGravityPerDistanceSquared = adjustedGravity / distanceSq;
 
 					normalize(positionDiff, accelerationDirection); // for "this" object
