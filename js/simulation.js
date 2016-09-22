@@ -203,7 +203,7 @@ APP.simulation = (function simulation(THREE) {
 			var mass;
 			var color;
 			
-			for (var i = 0; i < positions.length; i += 3) {
+			for (var i = 0; i < state.particleCount; ++i) {
 					
 				x = (getRandom() * maxAbsRange * 2) - maxAbsRange;
 				y = (getRandom() * maxAbsRange * 2) - maxAbsRange;
@@ -214,24 +214,24 @@ APP.simulation = (function simulation(THREE) {
 				color = calculateColor(mass);
 
 				//for computation
-				state.positions[i    ] = x;
-				state.positions[i + 1] = y;
-				state.positions[i + 2] = z;
-				state.velocities[i    ] = 0;
-				state.velocities[i + 1] = 0;
-				state.velocities[i + 2] = 0;
-				state.accelerations[i    ] = 0;
-				state.accelerations[i + 1] = 0;
-				state.accelerations[i + 2] = 0;
-				state.masses = mass;
+				state.positions[i * 3    ] = x;
+				state.positions[i * 3 + 1] = y;
+				state.positions[i * 3 + 2] = z;
+				state.velocities[i * 3    ] = 0;
+				state.velocities[i * 3 + 1] = 0;
+				state.velocities[i * 3 + 2] = 0;
+				state.accelerations[i * 3    ] = 0;
+				state.accelerations[i * 3 + 1] = 0;
+				state.accelerations[i * 3 + 2] = 0;
+				state.masses[i] = mass;
 
 				//for geometry
-				positions[i    ] = x;
-				positions[i + 1] = y;
-				positions[i + 2] = z;
-				colors[i    ] = color.r;
-				colors[i + 1] = color.g;
-				colors[i + 2] = color.b;
+				positions[i * 3    ] = x;
+				positions[i * 3 + 1] = y;
+				positions[i * 3 + 2] = z;
+				colors[i * 3    ] = color.r;
+				colors[i * 3 + 1] = color.g;
+				colors[i * 3 + 2] = color.b;
 			}
 
 			var geometry = new THREE.BufferGeometry();
@@ -300,20 +300,16 @@ APP.simulation = (function simulation(THREE) {
 
 				simulationDelta = timeDelta * state.timeMultiplier;
 
-				// startingLength = state.bodyArray.length;
-
 				updateSingleThreaded();
 				updatePositions(simulationDelta);
 
-				// endingLength = state.bodyArray.length;
+				var data = {
+					simulationDelta: simulationDelta,
+					particleCountChanged: false,
+					currentNumParticles: state.particleCount
+				};
 
-				// var data = {
-				// 	simulationDelta: simulationDelta,
-				// 	particleCountChanged: startingLength !== endingLength,
-				// 	currentNumParticles: endingLength
-				// };
-                //
-                // afterUpdate(data);
+                afterUpdate(data);
 			}
 		};
 
@@ -372,7 +368,7 @@ APP.simulation = (function simulation(THREE) {
 			}
 		};
 
-		var _oldUpdateSingleThreaded = function updateSingleThreaded() {
+		var _oldUpdateSingleThreaded = function _oldUpdateSingleThreaded() {
 			var i;
 			var j;
 			var bodyArray = state.bodyArray;
@@ -531,7 +527,11 @@ APP.simulation = (function simulation(THREE) {
 			var positionDelta = getEmptyVector();
 			var velocityDelta = getEmptyVector();
 
+			delta /= 1000;
 			var deltaSqOver2 = (delta * delta) / 2;
+
+			var pointCloudPositions = state.pointCloud.geometry.getAttribute('position');
+			var newPos;
 
 			for (i = 0; i < particleCount; ++i) {
 				position = getBodyPosition(i);
@@ -549,13 +549,17 @@ APP.simulation = (function simulation(THREE) {
 				addBodyPosition(i, positionDelta);
 				addBodyVelocity(i, velocityDelta);
 
+				newPos = getBodyPosition(i);
+				pointCloudPositions.setXYZ(i, newPos.x, newPos.y, newPos.z);
+
 				setBodyAcceleration(i, getEmptyVector());
 			}
 
 			//translate positions in point cloud.
+			// state.pointCloud.geometry.getAttribute('position').set(state.positions);
 		};
 
-		var _oldUpdatePositions = function updatePositions(delta) {
+		var _oldUpdatePositions = function _oldUpdatePositions(delta) {
 
 			var body;
 			var bodyState;
@@ -673,11 +677,9 @@ APP.simulation = (function simulation(THREE) {
 
 		var getBodyPosition = function getBodyPosition(bodyIndex) {
 			var positions = state.positions;
-
 			var x = positions[bodyIndex * 3    ];
 			var y = positions[bodyIndex * 3 + 1];
 			var z = positions[bodyIndex * 3 + 2];
-
 			return {x: x, y: y, z: z};
 		};
 
@@ -697,11 +699,9 @@ APP.simulation = (function simulation(THREE) {
 
 		var getBodyVelocity = function getBodyVelocity(bodyIndex) {
 			var velocities = state.velocities;
-
 			var x = velocities[bodyIndex * 3    ];
 			var y = velocities[bodyIndex * 3 + 1];
 			var z = velocities[bodyIndex * 3 + 2];
-
 			return {x: x, y: y, z: z};
 		};
 
@@ -721,11 +721,9 @@ APP.simulation = (function simulation(THREE) {
 
 		var getBodyAcceleration = function getBodyAcceleration(bodyIndex) {
 			var accelerations = state.accelerations;
-
 			var x = accelerations[bodyIndex * 3    ];
 			var y = accelerations[bodyIndex * 3 + 1];
 			var z = accelerations[bodyIndex * 3 + 2];
-
 			return {x: x, y: y, z: z};
 		};
 
