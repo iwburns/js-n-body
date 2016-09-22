@@ -48,7 +48,7 @@ APP.simulation = (function simulation(THREE) {
 			maxGridSize: 10000,
 
 			minParticleCount: 1,
-			maxParticleCount: 1000,
+			maxParticleCount: 1000000,
 
 			minTrailLength: 0,
 			maxTrailLength: 1000
@@ -208,9 +208,9 @@ APP.simulation = (function simulation(THREE) {
 				mass   = (randomSizeMass * massRange) + state.minParticleMass;
 				color = calculateColor(mass);
 
-				positions[i    ] = i;
-				positions[i + 1] = i;
-				positions[i + 2] = i;
+				positions[i    ] = x;
+				positions[i + 1] = y;
+				positions[i + 2] = z;
 
 				colors[i    ] = color.r;
 				colors[i + 1] = color.g;
@@ -239,7 +239,7 @@ APP.simulation = (function simulation(THREE) {
 				'',
 				'void main()',
 				'{',
-				'   gl_PointSize = 10.0;',
+				'   gl_PointSize = 2.0;',
 				'	gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);',
 				'',
 				'}'
