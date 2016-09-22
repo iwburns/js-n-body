@@ -573,6 +573,30 @@ APP.simulation = (function simulation(THREE) {
 		var cloneVector = function cloneVector(v) {
 			return new THREE.Vector3(v.x, v.y, v.z);
 		};
+
+		var getBodyPosition = function getBodyPosition(bodyIndex) {
+			var positions = state.positions;
+
+			var x = positions[bodyIndex    ];
+			var y = positions[bodyIndex + 1];
+			var z = positions[bodyIndex + 2];
+
+			return {x: x, y: y, z: z};
+		};
+
+		var getBodyVelocity = function getBodyVelocity(bodyIndex) {
+			var velocities = state.velocities;
+
+			var x = velocities[bodyIndex    ];
+			var y = velocities[bodyIndex + 1];
+			var z = velocities[bodyIndex + 2];
+
+			return {x: x, y: y, z: z};
+		};
+
+		var getBodyMass = function getBodyMass(bodyIndex) {
+			return state.masses[bodyIndex];
+		};
 		
 		var calculateColor = function calculateColor(mass) {
 			var rgb = 0.75 - (mass / state.roughTotalMass);
