@@ -328,16 +328,16 @@ APP.simulation = (function simulation(THREE) {
 			var otherVelocity;
 			var otherMass;
 
-			var positionDiff = {x: 0, y: 0, z: 0};
+			var positionDiff = getEmptyVector();
 			var distanceSq;
 			var softeningDistanceSq = state.softeningDistance * state.softeningDistance;
 
 			var adjustedGravity = state.gravity * state.gravityMultiplier;
 			var adjustedGravityPerDistanceSquared;
 
-			var accelerationDirection = {x: 0, y: 0, z: 0};
+			var accelerationDirection = getEmptyVector();
 			var accelerationScalar;
-			var accelerationVector = {x: 0, y: 0, z: 0};
+			var accelerationVector = getEmptyVector();
 
 			for (i = 0; i < particleCount; ++i) {
 				thisPosition = getBodyPosition(i);
@@ -518,115 +518,157 @@ APP.simulation = (function simulation(THREE) {
 		};
 
 		var updatePositions = function updatePositions(delta) {
+			var i;
+			var particleCount = state.particleCount;
 
-			// var body;
-			// var bodyState;
-			// var arrayLen = bodyArray.length;
-            //
-			// if (state.useComputeRenderer) {
-            //
-			// 	var x, y, z;
-			// 	var pointCloud = state.pointCloud;
-            //
-			// 	var positions = pointCloud.geometry.getAttribute('position');
-			// 	var position;
-            //
-			// 	for (var i = 0; i < arrayLen; i++) {
-            //
-			// 		body = bodyArray[i];
-			// 		bodyState = body.getState();
-            //
-			// 		x = positions.array[i * positions.itemSize    ];
-			// 		y = positions.array[i * positions.itemSize + 1];
-			// 		z = positions.array[i * positions.itemSize + 2];
-            //
-			// 		position = new THREE.Vector3(x, y, z);
-            //
-			// 		bodyState.position = position;
-			// 		bodyState.mesh.position.set(position.x, position.y, position.z);
-			// 	}
-            //
-			// 	return;
-			// }
+			var position;
+			var velocity;
 
-			// var i;
-			// //we can't use a fixed array here because we don't know how many bodies will be removed.
-			// var newBodyArray = [];
-			//
-			// //miliseconds to seconds
-			// delta /= 1000;
-            //
-			// for (i = 0; i < arrayLen; ++i) {
-			// 	body = bodyArray[i];
-			// 	bodyState = body.getState();
-			//
-			// 	if (bodyState.mass === 0) {
-			// 		state.scene.remove(bodyState.mesh);
-			//
-			// 		if (bodyState.drawTrails) {
-			// 			state.scene.remove(bodyState.trail);
-			// 		}
-			// 		continue;
-			// 	}
-			//
-			// 	newBodyArray.push(body);
-			//
-			// 	if (bodyState.isLocked) {
-			// 		continue;
-			// 	}
-			//
-			// 	if (bodyState.radiusChanged) {
-			// 		bodyState.radiusChanged = false;
-			//
-			// 		state.scene.remove(bodyState.mesh);
-			//
-			// 		var bodyDefaults = body.getDefaults();
-			//
-			// 		var geometry = new THREE.SphereGeometry(bodyState.radius, bodyDefaults.widthSegements, bodyDefaults.heightSegments);
-			// 		var material = body.getDefaults().material;
-			//
-			// 		material.color = calculateColor(bodyState.mass);
-			//
-			// 		bodyState.mesh = new THREE.Mesh(geometry, material);
-			//
-			// 		state.scene.add(bodyState.mesh);
-			//
-			// 		bodyState.mesh.translateX(bodyState.position.x);
-			// 		bodyState.mesh.translateY(bodyState.position.y);
-			// 		bodyState.mesh.translateZ(bodyState.position.z);
-			// 	}
-			//
-			// 	var accelerationVector = bodyState.thisFrameAcceleration;
-			//
-			// 	// d = v1*t + (1/2)*a*(t^2)
-			// 	var velocityTime = cloneVector(bodyState.velocity).multiplyScalar(delta);
-			// 	var positionDelta = velocityTime.add(cloneVector(accelerationVector).multiplyScalar(0.5 * delta * delta));
-            //
-			// 	var velocityDelta = accelerationVector.multiplyScalar(delta);
-			//
-			// 	bodyState.position.add(positionDelta);
-			// 	bodyState.velocity.add(velocityDelta);
-			//
-			// 	bodyState.mesh.translateX(positionDelta.x);
-			// 	bodyState.mesh.translateY(positionDelta.y);
-			// 	bodyState.mesh.translateZ(positionDelta.z);
-			//
-			// 	if (bodyState.drawTrails) {
-			// 		var vertices = bodyState.trail.geometry.vertices;
-			// 		vertices.pop();
-			// 		vertices.unshift(cloneVector(bodyState.position));
-			// 		bodyState.trail.geometry.verticesNeedUpdate = true;
-			// 	}
-			//
-			// 	bodyState.thisFrameAcceleration = new THREE.Vector3();
-			// }
-			//
-			//
-			// state.bodyArray = newBodyArray;
+			var accelerationVector = getEmptyVector();
+			var velocityTime = getEmptyVector();
+			var accelTimeSqOver2 = getEmptyVector();
+
+			var positionDelta = getEmptyVector();
+			var velocityDelta = getEmptyVector();
+
+			var deltaSqOver2 = (delta * delta) / 2;
+
+			for (i = 0; i < particleCount; ++i) {
+				position = getBodyPosition(i);
+				velocity = getBodyVelocity(i);
+				accelerationVector = getBodyAcceleration(i);
+
+				// deltaD = v1*t + (1/2)*a*(t^2)
+				multiplyScalar(velocity, delta, velocityTime);
+				multiplyScalar(accelerationVector, deltaSqOver2, accelTimeSqOver2);
+				addVectors(velocityTime, accelTimeSqOver2, positionDelta);
+
+				// deltaV = a * t
+				multiplyScalar(accelerationVector, delta, velocityDelta);
+
+				addBodyPosition(i, positionDelta);
+				addBodyVelocity(i, velocityDelta);
+
+				setBodyAcceleration(i, getEmptyVector());
+			}
+
+			//translate positions in point cloud.
+		};
+
+		var _oldUpdatePositions = function updatePositions(delta) {
+
+			var body;
+			var bodyState;
+			var arrayLen = bodyArray.length;
+
+			if (state.useComputeRenderer) {
+
+				var x, y, z;
+				var pointCloud = state.pointCloud;
+
+				var positions = pointCloud.geometry.getAttribute('position');
+				var position;
+
+				for (var i = 0; i < arrayLen; i++) {
+
+					body = bodyArray[i];
+					bodyState = body.getState();
+
+					x = positions.array[i * positions.itemSize    ];
+					y = positions.array[i * positions.itemSize + 1];
+					z = positions.array[i * positions.itemSize + 2];
+
+					position = new THREE.Vector3(x, y, z);
+
+					bodyState.position = position;
+					bodyState.mesh.position.set(position.x, position.y, position.z);
+				}
+
+				return;
+			}
+
+			var i;
+			//we can't use a fixed array here because we don't know how many bodies will be removed.
+			var newBodyArray = [];
+
+			//miliseconds to seconds
+			delta /= 1000;
+
+			for (i = 0; i < arrayLen; ++i) {
+				body = bodyArray[i];
+				bodyState = body.getState();
+
+				if (bodyState.mass === 0) {
+					state.scene.remove(bodyState.mesh);
+
+					if (bodyState.drawTrails) {
+						state.scene.remove(bodyState.trail);
+					}
+					continue;
+				}
+
+				newBodyArray.push(body);
+
+				if (bodyState.isLocked) {
+					continue;
+				}
+
+				if (bodyState.radiusChanged) {
+					bodyState.radiusChanged = false;
+
+					state.scene.remove(bodyState.mesh);
+
+					var bodyDefaults = body.getDefaults();
+
+					var geometry = new THREE.SphereGeometry(bodyState.radius, bodyDefaults.widthSegements, bodyDefaults.heightSegments);
+					var material = body.getDefaults().material;
+
+					material.color = calculateColor(bodyState.mass);
+
+					bodyState.mesh = new THREE.Mesh(geometry, material);
+
+					state.scene.add(bodyState.mesh);
+
+					bodyState.mesh.translateX(bodyState.position.x);
+					bodyState.mesh.translateY(bodyState.position.y);
+					bodyState.mesh.translateZ(bodyState.position.z);
+				}
+
+				var accelerationVector = bodyState.thisFrameAcceleration;
+
+				// d = v1*t + (1/2)*a*(t^2)
+				var velocityTime = cloneVector(bodyState.velocity).multiplyScalar(delta);
+				var positionDelta = velocityTime.add(cloneVector(accelerationVector).multiplyScalar(0.5 * delta * delta));
+
+				var velocityDelta = accelerationVector.multiplyScalar(delta);
+
+				bodyState.position.add(positionDelta);
+				bodyState.velocity.add(velocityDelta);
+
+				bodyState.mesh.translateX(positionDelta.x);
+				bodyState.mesh.translateY(positionDelta.y);
+				bodyState.mesh.translateZ(positionDelta.z);
+
+				if (bodyState.drawTrails) {
+					var vertices = bodyState.trail.geometry.vertices;
+					vertices.pop();
+					vertices.unshift(cloneVector(bodyState.position));
+					bodyState.trail.geometry.verticesNeedUpdate = true;
+				}
+
+				bodyState.thisFrameAcceleration = new THREE.Vector3();
+			}
+
+
+			state.bodyArray = newBodyArray;
 		};
 
 		var cloneVector = function cloneVector(v) {
 			return new THREE.Vector3(v.x, v.y, v.z);
+		};
+
+		var getEmptyVector = function getEmptyVector() {
+			return {x: 0, y: 0, z: 0};
 		};
 
 		var getBodyPosition = function getBodyPosition(bodyIndex) {
@@ -639,6 +681,20 @@ APP.simulation = (function simulation(THREE) {
 			return {x: x, y: y, z: z};
 		};
 
+		var setBodyPosition = function setBodyPosition(bodyIndex, position) {
+			var positions = state.positions;
+			positions[bodyIndex * 3    ] = position.x;
+			positions[bodyIndex * 3 + 1] = position.y;
+			positions[bodyIndex * 3 + 2] = position.z;
+		};
+
+		var addBodyPosition = function addBodyPosition(bodyIndex, position) {
+			var positions = state.positions;
+			positions[bodyIndex * 3    ] += position.x;
+			positions[bodyIndex * 3 + 1] += position.y;
+			positions[bodyIndex * 3 + 2] += position.z;
+		};
+
 		var getBodyVelocity = function getBodyVelocity(bodyIndex) {
 			var velocities = state.velocities;
 
@@ -647,6 +703,20 @@ APP.simulation = (function simulation(THREE) {
 			var z = velocities[bodyIndex * 3 + 2];
 
 			return {x: x, y: y, z: z};
+		};
+
+		var setBodyVelocity = function setBodyVelocity(bodyIndex, velocity) {
+			var velocities = state.velocities;
+			velocities[bodyIndex * 3    ] = velocity.x;
+			velocities[bodyIndex * 3 + 1] = velocity.y;
+			velocities[bodyIndex * 3 + 2] = velocity.z;
+		};
+
+		var addBodyVelocity = function addBodyVelocity(bodyIndex, velocity) {
+			var velocities = state.velocities;
+			velocities[bodyIndex * 3    ] += velocity.x;
+			velocities[bodyIndex * 3 + 1] += velocity.y;
+			velocities[bodyIndex * 3 + 2] += velocity.z;
 		};
 
 		var getBodyAcceleration = function getBodyAcceleration(bodyIndex) {
@@ -681,6 +751,12 @@ APP.simulation = (function simulation(THREE) {
 			result.x = a.x - b.x;
 			result.y = a.y - b.y;
 			result.z = a.z - b.z;
+		};
+
+		var addVectors = function addVectors(a, b, result) {
+			result.x = a.x + b.x;
+			result.y = a.y + b.y;
+			result.z = a.z + b.z;
 		};
 
 		var multiplyScalar = function multiplyScalar(vector, scalar, result) {
