@@ -298,11 +298,8 @@ APP.simulation = (function simulation(THREE) {
 				// simulationDelta = timeDelta * state.timeMultiplier;
 				
 				//startingLength = state.bodyArray.length;
-				
 
-				updateWithComputeRenderer();
-
-
+				updateSingleThreaded();
 				//updatePositions(simulationDelta);
 				
 				//endingLength = state.bodyArray.length;
@@ -317,9 +314,9 @@ APP.simulation = (function simulation(THREE) {
 			}
 
 		};
-		
-		var updateWithComputeRenderer = function updateWithComputeRenderer() {
-			state.pointCloud.geometry.getAttribute('position').needsUpdate = true;
+
+		var updateSingleThreaded = function updateSingleThreaded() {
+
 		};
 
 		var updatePositions = function updatePositions(delta) {
