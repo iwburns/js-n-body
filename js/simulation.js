@@ -445,75 +445,86 @@ APP.simulation = (function simulation(THREE) {
 
 		var getBodyPosition = function getBodyPosition(bodyIndex) {
 			var positions = state.positions;
-			var x = positions[bodyIndex * 3    ];
-			var y = positions[bodyIndex * 3 + 1];
-			var z = positions[bodyIndex * 3 + 2];
+			var offset = bodyIndex * 3;
+			var x = positions[offset    ];
+			var y = positions[offset + 1];
+			var z = positions[offset + 2];
 			return {x: x, y: y, z: z};
 		};
 
 		var setBodyPosition = function setBodyPosition(bodyIndex, position) {
 			var positions = state.positions;
-			positions[bodyIndex * 3    ] = position.x;
-			positions[bodyIndex * 3 + 1] = position.y;
-			positions[bodyIndex * 3 + 2] = position.z;
+			var offset = bodyIndex * 3;
+			positions[offset    ] = position.x;
+			positions[offset + 1] = position.y;
+			positions[offset + 2] = position.z;
 		};
 
 		var addBodyPosition = function addBodyPosition(bodyIndex, position) {
 			var positions = state.positions;
-			positions[bodyIndex * 3    ] += position.x;
-			positions[bodyIndex * 3 + 1] += position.y;
-			positions[bodyIndex * 3 + 2] += position.z;
+			var offset = bodyIndex * 3;
+			positions[offset    ] += position.x;
+			positions[offset + 1] += position.y;
+			positions[offset + 2] += position.z;
 		};
 
 		var getBodyVelocity = function getBodyVelocity(bodyIndex) {
 			var velocities = state.velocities;
-			var x = velocities[bodyIndex * 3    ];
-			var y = velocities[bodyIndex * 3 + 1];
-			var z = velocities[bodyIndex * 3 + 2];
+			var offset = bodyIndex * 3;
+			var x = velocities[offset    ];
+			var y = velocities[offset + 1];
+			var z = velocities[offset + 2];
 			return {x: x, y: y, z: z};
 		};
 
 		var setBodyVelocity = function setBodyVelocity(bodyIndex, velocity) {
 			var velocities = state.velocities;
-			velocities[bodyIndex * 3    ] = velocity.x;
-			velocities[bodyIndex * 3 + 1] = velocity.y;
-			velocities[bodyIndex * 3 + 2] = velocity.z;
+			var offset = bodyIndex * 3;
+			velocities[offset    ] = velocity.x;
+			velocities[offset + 1] = velocity.y;
+			velocities[offset + 2] = velocity.z;
 		};
 
 		var addBodyVelocity = function addBodyVelocity(bodyIndex, velocity) {
 			var velocities = state.velocities;
-			velocities[bodyIndex * 3    ] += velocity.x;
-			velocities[bodyIndex * 3 + 1] += velocity.y;
-			velocities[bodyIndex * 3 + 2] += velocity.z;
+
+			var offset = bodyIndex * 3;
+			velocities[offset    ] += velocity.x;
+			velocities[offset + 1] += velocity.y;
+			velocities[offset + 2] += velocity.z;
 		};
 
 		var getBodyAcceleration = function getBodyAcceleration(bodyIndex) {
 			var accelerations = state.accelerations;
-			var x = accelerations[bodyIndex * 3    ];
-			var y = accelerations[bodyIndex * 3 + 1];
-			var z = accelerations[bodyIndex * 3 + 2];
+			var offset = bodyIndex * 3;
+			var x = accelerations[offset    ];
+			var y = accelerations[offset + 1];
+			var z = accelerations[offset + 2];
 			return {x: x, y: y, z: z};
 		};
 
 		var setBodyAcceleration = function setBodyAcceleration(bodyIndex, accel) {
 			var accelerations = state.accelerations;
-			accelerations[bodyIndex * 3    ] = accel.x;
-			accelerations[bodyIndex * 3 + 1] = accel.y;
-			accelerations[bodyIndex * 3 + 2] = accel.z;
+			var offset = bodyIndex * 3;
+			accelerations[offset    ] = accel.x;
+			accelerations[offset + 1] = accel.y;
+			accelerations[offset + 2] = accel.z;
 		};
 
 		var addBodyAcceleration = function addBodyAcceleration(bodyIndex, accel) {
 			var accelerations = state.accelerations;
-			accelerations[bodyIndex * 3    ] += accel.x;
-			accelerations[bodyIndex * 3 + 1] += accel.y;
-			accelerations[bodyIndex * 3 + 2] += accel.z;
+			var offset = bodyIndex * 3;
+			accelerations[offset    ] += accel.x;
+			accelerations[offset + 1] += accel.y;
+			accelerations[offset + 2] += accel.z;
 		};
 
 		var clearBodyAcceleration = function clearBodyAcceleration(bodyIndex) {
 			var accelerations = state.accelerations;
-			accelerations[bodyIndex * 3    ] = 0;
-			accelerations[bodyIndex * 3 + 1] = 0;
-			accelerations[bodyIndex * 3 + 2] = 0;
+			var offset = bodyIndex * 3;
+			accelerations[offset    ] = 0;
+			accelerations[offset + 1] = 0;
+			accelerations[offset + 2] = 0;
 		};
 
 		var getBodyMass = function getBodyMass(bodyIndex) {
